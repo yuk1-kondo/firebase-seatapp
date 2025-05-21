@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>座席表示</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="./firebase-config.js"></script>
+</head>
+<body>
+  <h1>座席表</h1>
+  <div id="seats"></div>
+
+  <script>
+    const seatDiv = document.getElementById("seats");
+
+    firebase.database().ref("seats").on("value", (snapshot) => {
+      const data = snapshot.val();
+      seatDiv.innerHTML = "";
+      for (let seat in data) {
+        seatDiv.innerHTML += `<p>席 ${seat} : ${data[seat]}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

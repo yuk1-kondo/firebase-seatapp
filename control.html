@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ルーレット操作</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="./firebase-config.js"></script>
+</head>
+<body>
+  <h1>ルーレット操作</h1>
+  <button onclick="assignSeat()">ルーレット回す</button>
+
+  <!-- ✅ ここが <script> タグ内の本体！ -->
+  <script>
+    const names = ["田中", "佐藤", "鈴木", "山田"];
+    const seats = [1, 2, 3, 4];
+
+    function assignSeat() {
+      const name = names[Math.floor(Math.random() * names.length)];
+      const seat = seats[Math.floor(Math.random() * seats.length)];
+
+      console.log("🔧 書き込む →", `seats/${seat} = ${name}`); // ここ重要！
+
+      firebase.database().ref("seats/" + seat).set(name)
+        .then(() => {
+          alert(`${name} さんが席 ${seat} に決定！`);
+        })
+        .catch((error) => {
+          console.error("❌ 書き込み失敗:", error);
+          alert("データベースに書き込めませんでした");
+        });
+    }
+  </script>
+</body>
+</html>
