@@ -1,34 +1,172 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <title>ルーレット操作</title>
+  <meta charset="UTF-8">
+  <title>ルーレット操作（フラット青系）</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2em;
+      background: #e3f2fd;
+      color: #333;
+    }
+    h1, h2 {
+      margin-bottom: 1em;
+    }
+    #nameButtons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 2em;
+    }
+    #nameButtons button {
+      padding: 14px;
+      font-size: 1em;
+      border: none;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: background 0.3s, transform 0.2s;
+    }
+    #nameButtons button:hover:not(:disabled) {
+      background: #bbdefb;
+      transform: scale(1.05);
+      cursor: pointer;
+    }
+    #nameButtons button.selected {
+      background: #42a5f5;
+      color: white;
+    }
+    #nameButtons button:disabled {
+      background: #eee;
+      color: #999;
+    }
+    #result {
+      font-size: 1.4em;
+      margin-top: 1em;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #result.show {
+      opacity: 1;
+    }
+    #lotteryBtn {
+      display: block;
+      margin: 0 auto;
+      padding: 14px 30px;
+      font-size: 1.2em;
+      background: #1e88e5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    }
+  </style>
 </head>
 <body>
-  <h1>ルーレット操作</h1>
-  <button onclick="assignSeat()">ルーレット回す</button>
+  <h1>先生ルーレット</h1>
+  <h2>名前を選んでください</h2>
+  <div id="nameButtons"></div>
 
-  <!-- ✅ ここが <script> タグ内の本体！ -->
+  <button id="lotteryBtn" onclick="runSeatLottery()">ルーレット開始</button>
+  <div id="result"></div>
+
   <script>
-    const names = ["田中", "佐藤", "鈴木", "山田"];
-    const seats = [1, 2, 3, 4];
+    const knownMembers = [
+      "上園", "井上", "伊藤達", "伴田", "内海", "加島", "加藤", "勇士", "北井", "北原", "南迫", "古宇田",
+      "右衛門佐", "吉澤", "吉田恭", "吉田里", "城", "堤", "増田", "大橋", "大浦", "太田徹", "奥山", "宮畑",
+      "小島", "岡田", "岡", "川村", "平井", "押岡", "明貝", "東山", "東", "松下", "松井", "松村", "柿木",
+      "栗本", "梅村", "森西", "河添", "泉谷", "渡辺", "澤木", "濱田", "玉川", "田中愛", "百合野", "福原",
+      "立石", "竹本", "紀太", "花崎", "藤田", "豕瀬", "辻本", "近藤", "野口", "濱中"
+    ];
+    const totalParticipants = 70;
+    const unknownMembers = Array.from({ length: totalParticipants - knownMembers.length }, (_, i) => `参加者${i + 1}`);
+    const allNames = [...knownMembers, ...unknownMembers];
 
-    function assignSeat() {
-      const name = names[Math.floor(Math.random() * names.length)];
-      const seat = seats[Math.floor(Math.random() * seats.length)];
+    const allSeats = [];
+    "ABCDEFG".split('').forEach(block => {
+      for (let i = 1; i <= 10; i++) {
+        allSeats.push(`${block}${i}`);
+      }
+    });
 
-      console.log("🔧 書き込む →", `seats/${seat} = ${name}`); // ここ重要！
+    let selectedName = null;
 
-      firebase.database().ref("seats/" + seat).set(name)
-        .then(() => {
-          alert(`${name} さんが席 ${seat} に決定！`);
-        })
-        .catch((error) => {
-          console.error("❌ 書き込み失敗:", error);
-          alert("データベースに書き込めませんでした");
-        });
+    function renderButtons(assigned = {}) {
+      const container = document.getElementById("nameButtons");
+      container.innerHTML = "";
+      allNames.forEach(name => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.disabled = Object.keys(assigned).includes(name);
+        if (!btn.disabled) {
+          btn.onclick = () => {
+            selectedName = name;
+            document.querySelectorAll("#nameButtons button").forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+            const resultDiv = document.getElementById("result");
+            resultDiv.textContent = `${name}先生を選択中...`;
+            resultDiv.classList.add("show");
+          };
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    firebase.database().ref("assignments").on("value", snapshot => {
+      const assigned = snapshot.val() || {};
+      renderButtons(assigned);
+    });
+
+    function runSeatLottery() {
+      if (!selectedName) {
+        alert("先に名前を選んでください");
+        return;
+      }
+
+      const db = firebase.database();
+      db.ref("assignments").once("value").then(snapshot => {
+        const assigned = snapshot.val() || {};
+        const assignedNames = Object.keys(assigned);
+        const assignedSeats = Object.values(assigned);
+
+        if (assignedNames.includes(selectedName)) {
+          alert(`${selectedName}先生はすでに席が割り当てられています`);
+          return;
+        }
+
+        const availableSeats = allSeats.filter(seat => !assignedSeats.includes(seat));
+        if (availableSeats.length === 0) {
+          alert("空き席がありません");
+          return;
+        }
+
+        let count = 0;
+        const maxCount = 20;
+        const interval = 100;
+        const resultDiv = document.getElementById("result");
+
+        const roulette = setInterval(() => {
+          const randomSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
+          resultDiv.textContent = `${selectedName}先生 → ${randomSeat}`;
+          resultDiv.classList.add("show");
+          count++;
+          if (count >= maxCount) {
+            clearInterval(roulette);
+            const finalSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
+            db.ref("assignments/" + selectedName).set(finalSeat).then(() => {
+              resultDiv.textContent = `🎉 ${selectedName}先生の席は ${finalSeat} に決定！`;
+              resultDiv.classList.add("show");
+              selectedName = null;
+              renderButtons(Object.assign({}, assigned, { [selectedName]: finalSeat }));
+            });
+          }
+        }, interval);
+      });
     }
   </script>
 </body>
