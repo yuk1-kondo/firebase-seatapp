@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ルーレット操作（フラット青系）</title>
+  <title>ルーレット操作（切替ボタン＋幹事演出）</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
@@ -45,7 +45,7 @@
       color: #999;
     }
     #result {
-      font-size: 1.4em;
+      font-size: 2em;
       margin-top: 1em;
       text-align: center;
       opacity: 0;
@@ -72,7 +72,7 @@
   <h2>名前を選んでください</h2>
   <div id="nameButtons"></div>
 
-  <button id="lotteryBtn" onclick="runSeatLottery()">ルーレット開始</button>
+  <button id="lotteryBtn" onclick="startLottery()">ルーレット開始</button>
   <div id="result"></div>
 
   <script>
@@ -94,7 +94,20 @@
       }
     });
 
+    const fixedAssignments = {
+      "近藤": "G1",
+      "澤木": "G2",
+      "加島": "G3",
+      "小島": "G4",
+      "北井": "G5",
+      "栗本": "G6"
+    };
+
     let selectedName = null;
+    let rouletteTimer = null;
+    let currentSeat = "";
+    let availableSeats = [];
+    let isFixed = false;
 
     function renderButtons(assigned = {}) {
       const container = document.getElementById("nameButtons");
@@ -122,50 +135,58 @@
       renderButtons(assigned);
     });
 
-    function runSeatLottery() {
+    function startLottery() {
       if (!selectedName) {
         alert("先に名前を選んでください");
         return;
       }
 
+      const btn = document.getElementById("lotteryBtn");
+      btn.textContent = "ストップ";
+      btn.onclick = stopLottery;
+
       const db = firebase.database();
       db.ref("assignments").once("value").then(snapshot => {
         const assigned = snapshot.val() || {};
-        const assignedNames = Object.keys(assigned);
         const assignedSeats = Object.values(assigned);
 
-        if (assignedNames.includes(selectedName)) {
+        if (Object.keys(assigned).includes(selectedName)) {
           alert(`${selectedName}先生はすでに席が割り当てられています`);
           return;
         }
 
-        const availableSeats = allSeats.filter(seat => !assignedSeats.includes(seat));
+        isFixed = !!fixedAssignments[selectedName];
+
+        availableSeats = allSeats.filter(seat =>
+          !assignedSeats.includes(seat) &&
+          (!isFixed ? !Object.values(fixedAssignments).includes(seat) : true)
+        );
+
         if (availableSeats.length === 0) {
           alert("空き席がありません");
           return;
         }
 
-        let count = 0;
-        const maxCount = 20;
-        const interval = 100;
         const resultDiv = document.getElementById("result");
-
-        const roulette = setInterval(() => {
-          const randomSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
-          resultDiv.textContent = `${selectedName}先生 → ${randomSeat}`;
+        rouletteTimer = setInterval(() => {
+          const showSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
+          resultDiv.textContent = `${selectedName}先生 → ${showSeat}`;
           resultDiv.classList.add("show");
-          count++;
-          if (count >= maxCount) {
-            clearInterval(roulette);
-            const finalSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
-            db.ref("assignments/" + selectedName).set(finalSeat).then(() => {
-              resultDiv.textContent = `🎉 ${selectedName}先生の席は ${finalSeat} に決定！`;
-              resultDiv.classList.add("show");
-              selectedName = null;
-              renderButtons(Object.assign({}, assigned, { [selectedName]: finalSeat }));
-            });
-          }
-        }, interval);
+        }, 100);
+      });
+    }
+
+    function stopLottery() {
+      clearInterval(rouletteTimer);
+      const db = firebase.database();
+      const resultDiv = document.getElementById("result");
+      const finalSeat = isFixed ? fixedAssignments[selectedName] : availableSeats[Math.floor(Math.random() * availableSeats.length)];
+      db.ref("assignments/" + selectedName).set(finalSeat).then(() => {
+        resultDiv.textContent = `🎉 ${selectedName}先生の席は ${finalSeat} に決定！`;
+        resultDiv.classList.add("show");
+        document.getElementById("lotteryBtn").textContent = "ルーレット開始";
+        document.getElementById("lotteryBtn").onclick = startLottery;
+        selectedName = null;
       });
     }
   </script>
