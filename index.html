@@ -1,134 +1,179 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>座席レイアウト（モード切替対応）</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>桜和会2025 歓送迎会 リアルタイム座席一覧表</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      padding: 2em;
-      background: #e3f2fd;
-      color: #333;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 1em;
+      text-align: center;
     }
     h1 {
-      color: #1565c0;
-      text-align: center;
-      margin-bottom: 2em;
+      margin-top: 0.5em;
+      font-size: 1.8em;
     }
-    .block {
-      margin-bottom: 2em;
+    #layout {
+      max-width: 95vw;
+      margin: 0 auto;
+      padding: 0 1em;
+      box-sizing: border-box;
     }
-    .block h2 {
-      margin-bottom: 0.5em;
-      color: #1976d2;
-    }
-    .row {
+    .pair-row {
       display: flex;
-      gap: 10px;
+      justify-content: center;
+      gap: 2em;
+      margin-bottom: 3em;
       flex-wrap: wrap;
     }
-    .seat-box {
-      width: 80px;
-      height: 60px;
-      background: #fff;
-      border: 2px solid #90caf9;
-      border-radius: 6px;
+    .table-block {
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+    .table-label {
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+    .seats-row {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      flex-wrap: wrap;
       justify-content: center;
-      font-size: 0.85em;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: background 0.3s;
     }
-    .seat-box.assigned {
-      background: #bbdefb;
-      color: #0d47a1;
-      font-weight: bold;
+    .seat {
+      width: 90px;
+      height: 60px;
+      padding: 5px;
+      border-radius: 10px;
+      background-color: #bbdefb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.9em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .seat-box.empty {
-      background: #ffebee;
-      color: #c62828;
-      font-style: italic;
-      font-weight: bold;
+    .empty {
+      background-color: #ffcdd2;
+    }
+    #qr-section {
+      margin-top: 2em;
+    }
+    #qr-section p {
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+    #qr-code {
+      max-width: 180px;
+      height: auto;
     }
     #resetBtn {
-      margin-top: 2em;
+      display: none;
+      margin-top: 1.5em;
       padding: 10px 20px;
+      font-size: 1em;
       background: #ef5350;
       color: white;
       border: none;
-      border-radius: 5px;
-      font-size: 1em;
-      display: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    @media (max-width: 600px) {
+      .seat {
+        width: 70px;
+        height: 50px;
+        font-size: 0.8em;
+      }
+      h1 {
+        font-size: 1.2em;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>座席レイアウト一覧</h1>
+  <h1>桜和会2025 歓送迎会 リアルタイム座席一覧表</h1>
   <div id="layout"></div>
-  <button id="resetBtn" onclick="resetAssignments()">全席リセット</button>
+
+  <div id="qr-section">
+    <p>QRコードを読み込めばお手元のスマホでも座席一覧が確認できます📱</p>
+    <img id="qr-code" src="/qr_seatapp.png" alt="座席一覧QRコード" />
+  </div>
+
+  <button id="resetBtn" onclick="resetAssignments()">🔄 割り当てをリセット</button>
 
   <script>
-    const layoutContainer = document.getElementById("layout");
+    const layout = document.getElementById("layout");
     const resetBtn = document.getElementById("resetBtn");
+    const tableSeatCounts = {
+      A: 5, B: 5, C: 5, D: 5,
+      E: 4, F: 4, G: 4, H: 4,
+      I: 6, J: 6,
+      K: 8, L: 7
+    };
 
-    // 管理者モードの判定（URLパラメータで ?admin=true）
-    const urlParams = new URLSearchParams(window.location.search);
-    const isAdmin = urlParams.get("admin") === "true";
-    if (isAdmin) {
-      resetBtn.style.display = "block";
-    }
+    let currentAssignments = {};
 
-    function renderLayout(assignments) {
-      layoutContainer.innerHTML = "";
-      "ABCDEFG".split('').forEach(block => {
-        const blockDiv = document.createElement("div");
-        blockDiv.className = "block";
+    function renderGroup(blocks) {
+      const row = document.createElement("div");
+      row.className = "pair-row";
+      blocks.forEach(block => {
+        const tableBlock = document.createElement("div");
+        tableBlock.className = "table-block";
 
-        const title = document.createElement("h2");
-        title.textContent = `ブロック ${block}`;
-        blockDiv.appendChild(title);
+        const label = document.createElement("div");
+        label.className = "table-label";
+        label.textContent = `テーブル${block}`;
+        tableBlock.appendChild(label);
 
-        const row = document.createElement("div");
-        row.className = "row";
+        const seatsRow = document.createElement("div");
+        seatsRow.className = "seats-row";
 
-        const seatCount = block === 'G' ? 6 : 10;
-
-        for (let i = 1; i <= seatCount; i++) {
-          const seat = `${block}${i}`;
-          const name = Object.entries(assignments).find(([k, v]) => v === seat)?.[0] || "";
-
-          const box = document.createElement("div");
-          box.className = "seat-box";
-          if (name) {
-            box.classList.add("assigned");
-            box.innerHTML = `${name}`;
-          } else {
-            box.classList.add("empty");
-            box.innerHTML = `空席`;
-          }
-          row.appendChild(box);
+        const count = tableSeatCounts[block];
+        for (let i = 1; i <= count; i++) {
+          const seatCode = `${block}${i}`;
+          const seatDiv = document.createElement("div");
+          seatDiv.className = "seat";
+          const name = Object.entries(currentAssignments).find(([_, s]) => s === seatCode)?.[0];
+          seatDiv.textContent = name || "空席";
+          if (!name) seatDiv.classList.add("empty");
+          seatsRow.appendChild(seatDiv);
         }
 
-        blockDiv.appendChild(row);
-        layoutContainer.appendChild(blockDiv);
+        tableBlock.appendChild(seatsRow);
+        row.appendChild(tableBlock);
       });
+      layout.appendChild(row);
     }
 
     firebase.database().ref("assignments").on("value", snapshot => {
-      const data = snapshot.val() || {};
-      renderLayout(data);
+      currentAssignments = snapshot.val() || {};
+      layout.innerHTML = "";
+      renderGroup(["A", "B"]);
+      renderGroup(["C", "D"]);
+      renderGroup(["E", "F", "G", "H"]);
+      renderGroup(["I", "J"]);
+      renderGroup(["K", "L"]);
     });
 
     function resetAssignments() {
-      if (!isAdmin) return;
-      if (confirm("本当にすべての席割り当てをリセットしますか？")) {
+      if (confirm("全ての席割り当てをリセットしてもよろしいですか？")) {
         firebase.database().ref("assignments").remove();
       }
+    }
+
+    // URL に ?admin=true があればリセットボタンを表示
+    if (window.location.search.includes("admin=true")) {
+      resetBtn.style.display = "inline-block";
     }
   </script>
 </body>

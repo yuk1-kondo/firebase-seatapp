@@ -1,194 +1,182 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>ルーレット操作（切替ボタン＋幹事演出）</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>桜和会2025 歓送迎会 座席ルーレット</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 2em;
-      background: #e3f2fd;
-      color: #333;
-    }
-    h1, h2 {
-      margin-bottom: 1em;
-    }
+    body { margin:0; padding:1em; font-family:sans-serif; background:#e3f2fd; text-align:center; color:#333; }
+    h1   { margin:.2em 0 .8em; font-size:1.6em; }
     #nameButtons {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 10px;
-      margin-bottom: 2em;
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      gap:10px; max-width:900px; margin:0 auto 1.5em;
     }
     #nameButtons button {
-      padding: 14px;
-      font-size: 1em;
-      border: none;
-      border-radius: 10px;
-      background: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: background 0.3s, transform 0.2s;
+      padding:14px; border:none; border-radius:10px;
+      background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.1);
+      font-size:1em; white-space:nowrap;
+      transition:transform .1s;
     }
-    #nameButtons button:hover:not(:disabled) {
-      background: #bbdefb;
-      transform: scale(1.05);
-      cursor: pointer;
-    }
-    #nameButtons button.selected {
-      background: #42a5f5;
-      color: white;
-    }
-    #nameButtons button:disabled {
-      background: #eee;
-      color: #999;
-    }
-    #result {
-      font-size: 2em;
-      margin-top: 1em;
-      text-align: center;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-    #result.show {
-      opacity: 1;
-    }
+    #nameButtons button:hover:not(:disabled) { transform:scale(1.05); background:#bbdefb; cursor:pointer; }
+    #nameButtons button.selected { background:#42a5f5; color:#fff; }
+    #nameButtons button:disabled { background:#eee; color:#999; }
+    #nameButtons button.long { font-size:.85em; }
+
     #lotteryBtn {
-      display: block;
-      margin: 0 auto;
-      padding: 14px 30px;
-      font-size: 1.2em;
-      background: #1e88e5;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+      padding:18px 30px; font-size:1.4em; border:none; border-radius:10px;
+      width:90%; max-width:600px; color:#fff; background:#1e88e5; margin-bottom:1em;
     }
+    #lotteryBtn.stop { background:#e53935; }
+
+    #result { font-size:1.5em; margin-bottom:1em; }
   </style>
 </head>
 <body>
-  <h1>先生ルーレット</h1>
-  <h2>名前を選んでください</h2>
+  <h1>桜和会2025 歓送迎会 座席ルーレット</h1>
   <div id="nameButtons"></div>
-
-  <button id="lotteryBtn" onclick="startLottery()">ルーレット開始</button>
+  <button id="lotteryBtn">ルーレット開始</button>
   <div id="result"></div>
 
-  <script>
-    const knownMembers = [
-      "上園", "井上", "伊藤達", "伴田", "内海", "加島", "加藤", "勇士", "北井", "北原", "南迫", "古宇田",
-      "右衛門佐", "吉澤", "吉田恭", "吉田里", "城", "堤", "増田", "大橋", "大浦", "太田徹", "奥山", "宮畑",
-      "小島", "岡田", "岡", "川村", "平井", "押岡", "明貝", "東山", "東", "松下", "松井", "松村", "柿木",
-      "栗本", "梅村", "森西", "河添", "泉谷", "渡辺", "澤木", "濱田", "玉川", "田中愛", "百合野", "福原",
-      "立石", "竹本", "紀太", "花崎", "藤田", "豕瀬", "辻本", "近藤", "野口", "濱中"
-    ];
-    const totalParticipants = 70;
-    const unknownMembers = Array.from({ length: totalParticipants - knownMembers.length }, (_, i) => `参加者${i + 1}`);
-    const allNames = [...knownMembers, ...unknownMembers];
+<script>
+(() => {
+  const fixedAssignments = {
+    "田中校長": "B1",
+    "福原教頭": "A1",
+    "平井事務長": "B2",
+    "川口前校長": "A2"
+  };
+  const fixedSeatSet = new Set(Object.values(fixedAssignments));
 
-    const allSeats = [];
-    "ABCDEFG".split('').forEach(block => {
-      for (let i = 1; i <= 10; i++) {
-        allSeats.push(`${block}${i}`);
+  // 除外された幹事6名を削除済みの参加者リスト
+  const knownMembers = [
+    "上園","井上","伊藤達","伴田","内海","加藤雪","勇士","南迫","田中礼",
+    "右衛門佐","吉澤","吉田恭","吉田里","城","堤","増田","大橋","大浦","太田徹","奥山","宮畑",
+    "岡田","岡","川村","平井事務長","押岡","明貝","東山","東","松下","松村","柿木",
+    "梅村","森西","河添","泉谷","渡辺","北原","濱田","玉川","田中校長","坪田","福原教頭",
+    "立石","竹本","紀太","花崎","藤田","豕瀬","櫻井","野口","濱中","島田","桝谷","川口前校長",
+    "岡本","松本","太田美","草薙","伊藤智","奥野","田中千","マーカス"
+  ];
+
+  // 全席リスト（固定席を除外）
+  const allSeats = [];
+  "ABCDEFGHIJKL".split("").forEach(block => {
+    let count = 10;
+    if (["A","B","C","D"].includes(block)) count = 5;
+    else if (["E","F","G","H"].includes(block)) count = 4;
+    else if (["I","J"].includes(block)) count = 6;
+    else if (block === "K") count = 8;
+    else if (block === "L") count = 7;
+    for (let i = 1; i <= count; i++) {
+      const code = `${block}${i}`;
+      if (!fixedSeatSet.has(code)) allSeats.push(code);
+    }
+  });
+
+  const App = {
+    selectedName: null,
+    timer: null,
+    spinOrder: [],
+    spinIndex: 0,
+
+    secureShuffle(arr) {
+      const a = arr.slice();
+      const u32 = new Uint32Array(1);
+      for (let i = a.length - 1; i > 0; i--) {
+        window.crypto.getRandomValues(u32);
+        const j = u32[0] % (i + 1);
+        [a[i], a[j]] = [a[j], a[i]];
       }
-    });
+      return a;
+    },
 
-    const fixedAssignments = {
-      "近藤": "G1",
-      "澤木": "G2",
-      "加島": "G3",
-      "小島": "G4",
-      "北井": "G5",
-      "栗本": "G6"
-    };
-
-    let selectedName = null;
-    let rouletteTimer = null;
-    let currentSeat = "";
-    let availableSeats = [];
-    let isFixed = false;
-
-    function renderButtons(assigned = {}) {
-      const container = document.getElementById("nameButtons");
-      container.innerHTML = "";
-      allNames.forEach(name => {
+    renderButtons(assigned = {}) {
+      const wrap = document.getElementById("nameButtons");
+      wrap.innerHTML = "";
+      knownMembers.forEach(name => {
         const btn = document.createElement("button");
         btn.textContent = name;
-        btn.disabled = Object.keys(assigned).includes(name);
-        if (!btn.disabled) {
-          btn.onclick = () => {
-            selectedName = name;
-            document.querySelectorAll("#nameButtons button").forEach(b => b.classList.remove("selected"));
-            btn.classList.add("selected");
-            const resultDiv = document.getElementById("result");
-            resultDiv.textContent = `${name}先生を選択中...`;
-            resultDiv.classList.add("show");
-          };
-        }
-        container.appendChild(btn);
+        if (name.length >= 4) btn.classList.add("long");
+        btn.disabled = Boolean(assigned[name]);
+        btn.onclick = () => {
+          App.selectedName = name;
+          document.querySelectorAll("#nameButtons button")
+                  .forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          document.getElementById("result").textContent = `${name}先生を選択中…`;
+        };
+        wrap.appendChild(btn);
       });
-    }
+    },
 
-    firebase.database().ref("assignments").on("value", snapshot => {
-      const assigned = snapshot.val() || {};
-      renderButtons(assigned);
-    });
-
-    function startLottery() {
-      if (!selectedName) {
-        alert("先に名前を選んでください");
-        return;
-      }
-
+    start() {
+      if (!App.selectedName) return alert("先に名前を選んでください");
       const btn = document.getElementById("lotteryBtn");
       btn.textContent = "ストップ";
-      btn.onclick = stopLottery;
+      btn.classList.add("stop");
+      btn.onclick = App.stop;
 
-      const db = firebase.database();
-      db.ref("assignments").once("value").then(snapshot => {
-        const assigned = snapshot.val() || {};
-        const assignedSeats = Object.values(assigned);
-
-        if (Object.keys(assigned).includes(selectedName)) {
-          alert(`${selectedName}先生はすでに席が割り当てられています`);
+      firebase.database().ref("assignments").once("value").then(snap => {
+        const assigned = snap.val() || {};
+        if (assigned[App.selectedName]) {
+          alert("すでに割り当て済みです");
           return;
         }
 
-        isFixed = !!fixedAssignments[selectedName];
+        const fixedSeat = fixedAssignments[App.selectedName];
+        const pool = fixedSeat ? allSeats
+                                : allSeats.filter(s => !Object.values(assigned).includes(s));
+        App.spinOrder = App.secureShuffle(pool);
+        App.spinIndex = 0;
 
-        availableSeats = allSeats.filter(seat =>
-          !assignedSeats.includes(seat) &&
-          (!isFixed ? !Object.values(fixedAssignments).includes(seat) : true)
-        );
-
-        if (availableSeats.length === 0) {
-          alert("空き席がありません");
-          return;
-        }
-
-        const resultDiv = document.getElementById("result");
-        rouletteTimer = setInterval(() => {
-          const showSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
-          resultDiv.textContent = `${selectedName}先生 → ${showSeat}`;
-          resultDiv.classList.add("show");
+        App.timer = setInterval(() => {
+          const seat = App.spinOrder[App.spinIndex % App.spinOrder.length];
+          document.getElementById("result").textContent =
+            `${App.selectedName}先生 → ${seat.charAt(0)}`;
+          App.spinIndex++;
         }, 100);
+      }).catch(err => {
+        console.error("DB read error", err);
+        alert("データ取得に失敗しました");
       });
-    }
+    },
 
-    function stopLottery() {
-      clearInterval(rouletteTimer);
-      const db = firebase.database();
-      const resultDiv = document.getElementById("result");
-      const finalSeat = isFixed ? fixedAssignments[selectedName] : availableSeats[Math.floor(Math.random() * availableSeats.length)];
-      db.ref("assignments/" + selectedName).set(finalSeat).then(() => {
-        resultDiv.textContent = `🎉 ${selectedName}先生の席は ${finalSeat} に決定！`;
-        resultDiv.classList.add("show");
-        document.getElementById("lotteryBtn").textContent = "ルーレット開始";
-        document.getElementById("lotteryBtn").onclick = startLottery;
-        selectedName = null;
-      });
+    stop() {
+      clearInterval(App.timer);
+      const btn = document.getElementById("lotteryBtn");
+      btn.textContent = "ルーレット開始";
+      btn.classList.remove("stop");
+      btn.onclick = App.start;
+      btn.disabled = true;
+      setTimeout(() => { btn.disabled = false; }, 2000);
+
+      const idx = App.spinIndex % App.spinOrder.length;
+      const finalSeat = fixedAssignments[App.selectedName] || App.spinOrder[idx];
+      console.log(`[LOG] ${App.selectedName} → ${finalSeat}`);
+
+      firebase.database().ref("assignments/" + App.selectedName)
+        .set(finalSeat)
+        .then(() => {
+          document.getElementById("result").textContent =
+            `🎉 ${App.selectedName}先生の席は ${finalSeat.charAt(0)} に決定！`;
+          App.selectedName = null;
+        })
+        .catch(err => {
+          console.error("DB write error", err);
+          alert("割り当て保存に失敗しました");
+        });
     }
-  </script>
+  };
+
+  firebase.database().ref("assignments").on("value", snap => {
+    App.renderButtons(snap.val() || {});
+    document.getElementById("lotteryBtn").onclick = App.start;
+    document.getElementById("result").textContent = "";
+  });
+})();
+</script>
 </body>
 </html>
