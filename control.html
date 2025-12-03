@@ -1,227 +1,497 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>桜和会2025 歓送迎会 座席ルーレット</title>
+  <meta charset="UTF-8">
+  <title>ルーレット操作</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
+  <script src="./utils.js"></script>
+  <link rel="stylesheet" href="./common.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      margin: 0;
-      padding: 1em;
-      font-family: sans-serif;
-      background: #e8edf2;
-      color: #37474f;
-      text-align: center;
-    }
-    h1 {
-      margin: .2em 0 .8em;
-      font-size: 1.6em;
-      color: #ff750f;
-    }
-    #nameButtons {
-      display:grid;
-      grid-template-columns:repeat(8,1fr);
-      gap:10px; max-width:900px; margin:0 auto 1.5em;
-    }
     #nameButtons button {
-      padding: 14px;
-      border: 1px solid #d7e0e8;
-      border-radius: 10px;
-      background: #f6f8fa;
-      box-shadow: 0 2px 6px rgba(55, 71, 79, 0.08);
-      font-size: 1em;
-      color: #37474f;
-      white-space: nowrap;
-      transition: transform .1s, background .1s;
-    }
-    #nameButtons button:hover:not(:disabled) {
-      transform: scale(1.03);
-      background: #e2e8ed;
-      cursor: pointer;
-    }
-    #nameButtons button.selected {
-      background: #546e7a;
-      border-color: #546e7a;
-      color: #fff;
-      box-shadow: 0 3px 10px rgba(84, 110, 122, 0.25);
-    }
-    #nameButtons button:disabled {
-      background: #e0e5ea;
-      color: #9aa6af;
-      border-color: #d7e0e8;
-      box-shadow: none;
-    }
-    #nameButtons button.long { font-size:.85em; }
-
-    #lotteryBtn {
-      padding: 18px 30px;
-      font-size: 1.4em;
+      padding: 1vh;
+      font-size: 1.6vh;
       border: none;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 600px;
-      color: #fff;
-      background: #ff750f;
-      margin-bottom: 1em;
-      box-shadow: 0 4px 12px rgba(255, 117, 15, 0.25);
-    }
-    #lotteryBtn.stop {
-      background: #d84315;
-      box-shadow: 0 4px 12px rgba(216, 67, 21, 0.25);
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      height: 6vh;
     }
 
-    #result {
-      font-size: 1.5em;
-      margin-bottom: 1em;
-      color: #37474f;
+    #nameButtons button:hover:not(:disabled) {
+      background: var(--secondary-color);
+      color: white;
+      transform: scale(1.05);
+    }
+
+    #nameButtons button.selected {
+      background: var(--primary-color);
+      color: white;
+      box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
+    }
+
+    #nameButtons button:disabled {
+      background: #eee;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #result.roulette-animation {
+      animation: rouletteSpin 0.1s infinite;
+    }
+
+    @keyframes rouletteSpin {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.1);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    #adminResetBtn {
+      display: none;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    .no-members-message {
+      text-align: center;
+      color: #666;
+      font-size: 1.2rem;
+      margin: 3rem 0;
+      padding: 2rem;
+      background: #f5f5f5;
+      border-radius: var(--border-radius);
+    }
+
+    /* モバイル対応 */
+    @media (max-width: 768px) {
+      #nameButtons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 8px;
+      }
+
+      #nameButtons button {
+        padding: 12px 8px;
+        font-size: 0.85rem;
+        height: auto;
+        min-height: 48px;
+      }
+
+      #control-footer {
+        height: auto;
+        padding: 16px;
+      }
+
+      #result {
+        font-size: 1.5rem;
+        min-height: 40px;
+        margin: 8px 0;
+      }
+
+      #control-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+      }
+
+      #control-buttons .btn {
+        width: 100%;
+        margin: 0;
+      }
+
+      .no-members-message {
+        font-size: 1rem;
+        margin: 1.5rem 0;
+        padding: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #nameButtons {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      #nameButtons button {
+        font-size: 0.8rem;
+        padding: 10px 6px;
+      }
+
+      #result {
+        font-size: 1.3rem;
+      }
     }
   </style>
 </head>
+
 <body>
-  <h1>桜和会2025 歓送迎会 座席ルーレット</h1>
-  <div id="nameButtons"></div>
-  <button id="lotteryBtn">ルーレット開始</button>
-  <div id="result"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading"></div>
+  </div>
 
-<script>
-(() => {
-  const fixedAssignments = {
-    "田中校長": "B1",
-    "福原教頭": "A1",
-    "平井事務長": "B2",
-    "川口前校長": "A2"
-  };
-  const fixedSeatSet = new Set(Object.values(fixedAssignments));
+  <div class="container">
+    <div id="control-layout">
+      <div style="text-align: center;">
+        <h1>桜和会2025 忘年会座席ルーレット</h1>
+        <div class="admin-links" id="adminLinks">
+          <a href="admin.html">⚙️ 設定</a>
+          <a href="index.html">📋 座席表示</a>
+        </div>
+      </div>
 
-  // 除外された幹事6名を削除済みの参加者リスト
-  const knownMembers = [
-    "上園","井上","伊藤達","伴田","内海","加藤雪","勇士","南迫","田中礼",
-    "右衛門佐","吉澤","吉田恭","吉田里","城","堤","増田","大橋","大浦","太田徹","奥山","宮畑",
-    "岡田","岡","川村","平井事務長","押岡","明貝","東山","東","松下","松村","柿木",
-    "梅村","森西","河添","泉谷","渡辺","北原","濱田","玉川","田中校長","坪田","福原教頭",
-    "立石","竹本","紀太","花崎","藤田","豕瀬","櫻井","野口","濱中","島田","桝谷","川口前校長",
-    "岡本","松本","太田美","草薙","伊藤智","奥野","田中千","マーカス"
-  ];
+      <div id="nameButtons" class="grid grid-4"></div>
 
-  // 全席リスト（固定席を除外）
-  const allSeats = [];
-  "ABCDEFGHIJKL".split("").forEach(block => {
-    let count = 10;
-    if (["A","B","C","D"].includes(block)) count = 5;
-    else if (["E","F","G","H"].includes(block)) count = 4;
-    else if (["I","J"].includes(block)) count = 6;
-    else if (block === "K") count = 8;
-    else if (block === "L") count = 7;
-    for (let i = 1; i <= count; i++) {
-      const code = `${block}${i}`;
-      if (!fixedSeatSet.has(code)) allSeats.push(code);
-    }
-  });
+      <div id="control-footer">
+        <div id="result"></div>
+        <div id="control-buttons">
+          <button id="lotteryBtn" class="btn btn-primary btn-large" onclick="startLottery()">🎰 ルーレット開始</button>
+          <button id="adminResetBtn" class="btn btn-danger" onclick="resetAssignments()">🔄 リセット</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  const App = {
-    selectedName: null,
-    timer: null,
-    spinOrder: [],
-    spinIndex: 0,
+  <script>
+    class RouletteApp {
+      constructor() {
+        this.utils = window.seatAppUtils;
+        this.loadingOverlay = document.getElementById("loadingOverlay");
+        this.nameButtons = document.getElementById("nameButtons");
+        this.lotteryBtn = document.getElementById("lotteryBtn");
+        this.resultDiv = document.getElementById("result");
 
-    secureShuffle(arr) {
-      const a = arr.slice();
-      const u32 = new Uint32Array(1);
-      for (let i = a.length - 1; i > 0; i--) {
-        window.crypto.getRandomValues(u32);
-        const j = u32[0] % (i + 1);
-        [a[i], a[j]] = [a[j], a[i]];
+        // アプリ状態
+        this.knownMembers = [];
+        this.allSeats = [];
+        this.tableSeatCounts = {};
+        this.fixedAssignments = {};
+        this.selectedName = null;
+        this.rouletteTimer = null;
+        this.availableSeats = [];
+        this.isSpinning = false;
+        this.currentAssignments = {};
+
+        this.init();
       }
-      return a;
-    },
 
-    renderButtons(assigned = {}) {
-      const wrap = document.getElementById("nameButtons");
-      wrap.innerHTML = "";
-      knownMembers.forEach(name => {
-        const btn = document.createElement("button");
-        btn.textContent = name;
-        if (name.length >= 4) btn.classList.add("long");
-        btn.disabled = Boolean(assigned[name]);
-        btn.onclick = () => {
-          App.selectedName = name;
-          document.querySelectorAll("#nameButtons button")
-                  .forEach(b => b.classList.remove("selected"));
-          btn.classList.add("selected");
-          document.getElementById("result").textContent = `${name}先生を選択中…`;
-        };
-        wrap.appendChild(btn);
-      });
-    },
+      async init() {
+        try {
+          this.showLoading(true);
 
-    start() {
-      if (!App.selectedName) return alert("先に名前を選んでください");
-      const btn = document.getElementById("lotteryBtn");
-      btn.textContent = "ストップ";
-      btn.classList.add("stop");
-      btn.onclick = App.stop;
+          // 管理者モードの確認
+          if (this.utils.isAdminMode()) {
+            document.getElementById("adminResetBtn").style.display = "inline-block";
+            document.getElementById("adminLinks").classList.add("show");
+          }
 
-      firebase.database().ref("assignments").once("value").then(snap => {
-        const assigned = snap.val() || {};
-        if (assigned[App.selectedName]) {
-          alert("すでに割り当て済みです");
+          // 設定データを読み込み
+          await this.loadSettings();
+
+          // リアルタイムリスナーを設定
+          this.setupRealtimeListeners();
+
+        } catch (error) {
+          console.error('初期化エラー:', error);
+          this.showError('アプリケーションの初期化に失敗しました');
+        } finally {
+          this.showLoading(false);
+        }
+      }
+
+      async loadSettings() {
+        const settings = await this.utils.getSettings();
+
+        this.knownMembers = settings.members;
+        this.tableSeatCounts = settings.tables;
+        this.fixedAssignments = settings.fixed;
+
+        // 座席リストを生成
+        this.generateAllSeats();
+
+        // 初回ボタン描画
+        this.renderButtons();
+
+        this.utils.log('設定読み込み完了', {
+          membersCount: this.knownMembers.length,
+          tablesCount: Object.keys(this.tableSeatCounts).length,
+          fixedCount: Object.keys(this.fixedAssignments).length
+        });
+      }
+
+      generateAllSeats() {
+        this.allSeats = this.utils.generateSeats(this.tableSeatCounts);
+      }
+
+      setupRealtimeListeners() {
+        this.utils.addListener('assignments', (assignments) => {
+          this.currentAssignments = assignments || {};
+          this.renderButtons();
+        }, 'roulette');
+      }
+
+      renderButtons() {
+        if (!this.nameButtons) return;
+
+        this.nameButtons.innerHTML = "";
+
+        if (this.knownMembers.length === 0) {
+          this.renderNoMembersMessage();
           return;
         }
 
-        const fixedSeat = fixedAssignments[App.selectedName];
-        const pool = fixedSeat ? allSeats
-                                : allSeats.filter(s => !Object.values(assigned).includes(s));
-        App.spinOrder = App.secureShuffle(pool);
-        App.spinIndex = 0;
+        this.knownMembers.forEach(name => {
+          const btn = this.utils.createElement("button", "", name);
+          btn.disabled = Object.keys(this.currentAssignments).includes(name);
+          btn.onclick = () => this.selectMember(name, btn);
 
-        App.timer = setInterval(() => {
-          const seat = App.spinOrder[App.spinIndex % App.spinOrder.length];
-          document.getElementById("result").textContent =
-            `${App.selectedName}先生 → ${seat.charAt(0)}`;
-          App.spinIndex++;
-        }, 100);
-      }).catch(err => {
-        console.error("DB read error", err);
-        alert("データ取得に失敗しました");
-      });
-    },
+          // アクセシビリティ
+          btn.setAttribute('aria-pressed', 'false');
+          btn.setAttribute('data-member', name);
 
-    stop() {
-      clearInterval(App.timer);
-      const btn = document.getElementById("lotteryBtn");
-      btn.textContent = "ルーレット開始";
-      btn.classList.remove("stop");
-      btn.onclick = App.start;
-      btn.disabled = true;
-      setTimeout(() => { btn.disabled = false; }, 2000);
-
-      const idx = App.spinIndex % App.spinOrder.length;
-      const finalSeat = fixedAssignments[App.selectedName] || App.spinOrder[idx];
-      console.log(`[LOG] ${App.selectedName} → ${finalSeat}`);
-
-      firebase.database().ref("assignments/" + App.selectedName)
-        .set(finalSeat)
-        .then(() => {
-          document.getElementById("result").textContent =
-            `🎉 ${App.selectedName}先生の席は ${finalSeat.charAt(0)} に決定！`;
-          App.selectedName = null;
-        })
-        .catch(err => {
-          console.error("DB write error", err);
-          alert("割り当て保存に失敗しました");
+          this.nameButtons.appendChild(btn);
         });
-    }
-  };
+      }
 
-  firebase.database().ref("assignments").on("value", snap => {
-    App.renderButtons(snap.val() || {});
-    document.getElementById("lotteryBtn").onclick = App.start;
-    document.getElementById("result").textContent = "";
-  });
-})();
-</script>
+      renderNoMembersMessage() {
+        const message = this.utils.createElement("div", "no-members-message");
+        message.innerHTML = `
+          👥 参加者が登録されていません<br>
+          <small>管理者画面で参加者を登録してください</small>
+        `;
+        this.nameButtons.appendChild(message);
+        this.lotteryBtn.disabled = true;
+      }
+
+      selectMember(name, btn) {
+        this.selectedName = name;
+
+        // 全ボタンの選択状態をリセット
+        this.nameButtons.querySelectorAll("button").forEach(b => {
+          b.classList.remove("selected");
+          b.setAttribute('aria-pressed', 'false');
+        });
+
+        // 選択されたボタンをハイライト
+        btn.classList.add("selected");
+        btn.setAttribute('aria-pressed', 'true');
+
+        this.showResult(`${name}先生を選択中...`, true);
+        this.lotteryBtn.disabled = false;
+
+        this.utils.log('参加者選択', name);
+      }
+
+      async startLottery() {
+        if (!this.selectedName || this.isSpinning) return;
+
+        try {
+          this.isSpinning = true;
+          this.updateLotteryButton(true);
+
+          // 現在の割り当て状況を取得
+          const assignedSeats = Object.values(this.currentAssignments);
+
+          // 既に割り当て済みかチェック
+          if (this.currentAssignments[this.selectedName]) {
+            this.showError(`${this.selectedName}先生はすでに席が割り当てられています`);
+            this.resetBtn();
+            return;
+          }
+
+          // 利用可能座席を計算
+          this.availableSeats = this.utils.getAvailableSeats(
+            this.allSeats,
+            this.currentAssignments,
+            this.selectedName,
+            this.fixedAssignments
+          );
+
+          if (this.availableSeats.length === 0) {
+            this.showError("空き席がありません");
+            this.resetBtn();
+            return;
+          }
+
+          // ルーレットアニメーション開始
+          this.startRouletteAnimation();
+
+        } catch (error) {
+          console.error('ルーレット開始エラー:', error);
+          this.showError('ルーレットの開始でエラーが発生しました');
+          this.resetBtn();
+        }
+      }
+
+      startRouletteAnimation() {
+        this.resultDiv.classList.add('roulette-animation');
+
+        this.rouletteTimer = setInterval(() => {
+          const showSeat = this.availableSeats[Math.floor(Math.random() * this.availableSeats.length)];
+          this.showResult(`${this.selectedName}先生 → テーブル${showSeat.charAt(0)}`, true);
+        }, 100);
+      }
+
+      async stopLottery() {
+        if (!this.isSpinning) return;
+
+        try {
+          clearInterval(this.rouletteTimer);
+          this.resultDiv.classList.remove('roulette-animation');
+
+          // 最終座席を決定
+          const finalSeat = this.fixedAssignments[this.selectedName] ||
+            this.availableSeats[Math.floor(Math.random() * this.availableSeats.length)];
+
+          if (!finalSeat) {
+            this.showError('座席の割り当てに失敗しました');
+            this.resetBtn();
+            return;
+          }
+
+          // Firebaseに保存
+          const success = await this.utils.setData(`assignments/${this.selectedName}`, finalSeat);
+
+          if (success) {
+            this.showResult(`🎉 ${this.selectedName}先生の席は テーブル${finalSeat} に決定！`, true);
+            this.utils.log('座席決定', { member: this.selectedName, seat: finalSeat });
+          } else {
+            this.showError('座席の保存に失敗しました');
+          }
+
+        } catch (error) {
+          console.error('座席割り当てエラー:', error);
+          this.showError('座席の割り当てでエラーが発生しました');
+        } finally {
+          this.resetBtn();
+          this.selectedName = null;
+        }
+      }
+
+      updateLotteryButton(isSpinning) {
+        if (!this.lotteryBtn) return;
+
+        if (isSpinning) {
+          this.lotteryBtn.textContent = "⏹️ ストップ";
+          this.lotteryBtn.onclick = () => this.stopLottery();
+          this.lotteryBtn.classList.remove('btn-primary');
+          this.lotteryBtn.classList.add('btn-danger');
+        } else {
+          this.lotteryBtn.textContent = "🎰 ルーレット開始";
+          this.lotteryBtn.onclick = () => this.startLottery();
+          this.lotteryBtn.classList.remove('btn-danger');
+          this.lotteryBtn.classList.add('btn-primary');
+          this.lotteryBtn.disabled = !this.selectedName;
+        }
+      }
+
+      resetBtn() {
+        this.isSpinning = false;
+        this.updateLotteryButton(false);
+      }
+
+      showResult(text, show = false) {
+        if (!this.resultDiv) return;
+
+        this.resultDiv.textContent = text;
+        this.resultDiv.classList.toggle('show', show);
+      }
+
+      async resetAssignments() {
+        const confirmed = await this.utils.confirm("全ての席割り当てをリセットしますか？");
+        if (!confirmed) return;
+
+        try {
+          this.showLoading(true);
+          const success = await this.utils.removeData("assignments");
+
+          if (success) {
+            this.showResult("", false);
+            this.selectedName = null;
+            this.utils.log('割り当てリセット完了');
+          } else {
+            this.showError('リセットに失敗しました');
+          }
+        } catch (error) {
+          console.error('リセットエラー:', error);
+          this.showError('リセット処理でエラーが発生しました');
+        } finally {
+          this.showLoading(false);
+        }
+      }
+
+      showLoading(isLoading) {
+        if (this.loadingOverlay) {
+          this.loadingOverlay.classList.toggle('hidden', !isLoading);
+        }
+      }
+
+      showError(message) {
+        alert(`エラー: ${message}`);
+      }
+
+      destroy() {
+        if (this.rouletteTimer) {
+          clearInterval(this.rouletteTimer);
+        }
+        this.utils.removeListeners('roulette');
+      }
+    }
+
+    // グローバル関数（既存のHTMLから呼び出されるため）
+    function startLottery() {
+      if (window.rouletteApp) {
+        window.rouletteApp.startLottery();
+      }
+    }
+
+    function resetAssignments() {
+      if (window.rouletteApp) {
+        window.rouletteApp.resetAssignments();
+      }
+    }
+
+    // アプリ初期化
+    document.addEventListener('DOMContentLoaded', () => {
+      window.rouletteApp = new RouletteApp();
+    });
+
+    // ページ離脱時のクリーンアップ
+    window.addEventListener('beforeunload', () => {
+      window.rouletteApp?.destroy();
+    });
+  </script>
 </body>
+
 </html>
