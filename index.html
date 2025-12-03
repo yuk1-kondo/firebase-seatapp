@@ -1,324 +1,274 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>桜和会2025 歓送迎会 リアルタイム座席一覧表</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>桜和会2025 忘年会 リアルタイム座席一覧表</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
+  <script src="./utils.js"></script>
+  <link rel="stylesheet" href="./common.css">
   <style>
-    :root {
-      --base-width: 1200;
-      --scale: 1;
-    }
-    * {
-      box-sizing: border-box;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow-x: hidden;
-    }
-    body {
-      font-family: sans-serif;
-      background: #e8edf2;
-      color: #37474f;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      padding: 1em;
-    }
-    h1 {
-      margin-top: 0.5em;
-      font-size: 1.8em;
-      flex-shrink: 0;
-      color: #ff750f;
-      border-bottom: 3px solid #ff750f;
-      padding-bottom: 0.3em;
-      display: inline-block;
-    }
-    #scale-container {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      flex: 1;
-      overflow: hidden;
-    }
-    #layout-wrapper {
-      transform-origin: top center;
-      transition: transform 0.2s ease;
-    }
-    #layout {
-      width: 1200px;
-      margin: 0 auto;
-      padding: 1em;
-    }
-    .table-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5em;
-      margin-bottom: 1.5em;
-      justify-items: center;
-    }
-    .table-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: #f6f8fa;
-      border: 1px solid #d7e0e8;
-      border-radius: 15px;
-      padding: 12px 15px;
-      box-shadow: 0 2px 6px rgba(55, 71, 79, 0.08);
-      width: 260px;
-      min-height: 120px;
-    }
-    .table-label {
-      font-weight: bold;
-      margin-bottom: 0.5em;
-      color: #ff750f;
-      font-size: 1em;
-    }
-    .seats-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-      width: 100%;
-    }
-    .seat {
-      width: 100%;
-      aspect-ratio: 1.4;
-      padding: 3px;
-      border-radius: 6px;
-      background-color: transparent;
-      border: 2px dashed #c7d1d9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-size: 0.75em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      color: #6f7b85;
-    }
-    .seat.occupied {
-      background-color: #546e7a;
-      border: none;
-      color: white;
-      font-weight: bold;
-    }
-    .seat.empty {
-      background-color: transparent;
-      border: 2px dashed #c7d1d9;
-      color: #6f7b85;
-    }
-    .qr-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #f6f8fa;
-      border: 1px solid #d7e0e8;
-      border-radius: 15px;
-      padding: 12px 15px;
-      box-shadow: 0 2px 6px rgba(55, 71, 79, 0.08);
-      width: 260px;
-      min-height: 120px;
-    }
-    .qr-block p {
-      font-size: 0.85em;
-      margin: 0 0 0.5em 0;
-      color: #555;
-    }
-    .qr-block img {
-      max-width: 80px;
-      height: auto;
-    }
-    #resetBtn {
+    #adminResetBtn {
       display: none;
-      margin-top: 1.5em;
-      padding: 10px 20px;
-      font-size: 1em;
-      background: #ef5350;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    /* QR Code Section hidden by default in HTML, shown via JS in grid */
+    #qr-template {
+      display: none;
     }
   </style>
 </head>
+
 <body>
-  <h1>桜和会2025 忘年会 座席一覧表</h1>
-  <div id="scale-container">
-    <div id="layout-wrapper">
-      <div id="layout"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading"></div>
+  </div>
+
+  <div class="container">
+    <div style="text-align: center; position: relative; margin-bottom: 1vh;">
+      <h1>桜和会2025 忘年会 座席一覧表</h1>
+      <div class="admin-links" id="adminLinks">
+        <a href="admin.html">⚙️ 設定</a>
+        <a href="control.html">🎰 ルーレット</a>
+      </div>
+      <button id="adminResetBtn" class="btn btn-danger" onclick="resetAssignments()"
+        style="position: absolute; top: 0; left: 0;">🔄 リセット</button>
+    </div>
+
+    <div id="layout" class="tables-container"></div>
+
+    <!-- Template for QR Code to be cloned into grid -->
+    <div id="qr-template">
+      <div id="qr-section">
+        <p style="font-size: 1.5vh; margin: 0.5vh 0;">スマホで確認</p>
+        <img id="qr-code" src="./qr_seatapp.png" alt="座席一覧QRコード">
+      </div>
     </div>
   </div>
 
-  <button id="resetBtn" onclick="resetAssignments()">🔄 割り当てをリセット</button>
-
   <script>
-    const layout = document.getElementById("layout");
-    const resetBtn = document.getElementById("resetBtn");
-    const layoutWrapper = document.getElementById("layout-wrapper");
-    const scaleContainer = document.getElementById("scale-container");
-    
-    // テーブルごとの席数（Firebaseから取得するか、ここで定義）
-    // 最大10席まで対応
-    const tableSeatCounts = {
-      A: 6, B: 5, C: 5, D: 5,
-      E: 4, F: 4, G: 2, H: 2,
-      I: 2, J: 2, K: 10, L: 6
-    };
-
-    // テーブル名のリスト（順番通り）
-    const tableNames = Object.keys(tableSeatCounts);
-
-    let currentAssignments = {};
-
-    // 画面サイズに合わせてスケールを調整
-    function adjustScale() {
-      const containerWidth = scaleContainer.offsetWidth;
-      const containerHeight = window.innerHeight - 100;
-      const layoutWidth = 1200;
-      const layoutHeight = layoutWrapper.scrollHeight || 600;
-      
-      const scaleX = (containerWidth - 40) / layoutWidth;
-      const scaleY = (containerHeight - 40) / layoutHeight;
-      const scale = Math.min(scaleX, scaleY, 1.5);
-      
-      layoutWrapper.style.transform = `scale(${Math.max(scale, 0.4)})`;
-    }
-
-    function createTableBlock(tableName) {
-      const tableBlock = document.createElement("div");
-      tableBlock.className = "table-block";
-
-      const label = document.createElement("div");
-      label.className = "table-label";
-      label.textContent = `テーブル${tableName}`;
-      tableBlock.appendChild(label);
-
-      const seatsGrid = document.createElement("div");
-      seatsGrid.className = "seats-grid";
-
-      const count = tableSeatCounts[tableName];
-      for (let i = 1; i <= count; i++) {
-        const seatCode = `${tableName}${i}`;
-        const seatDiv = document.createElement("div");
-        seatDiv.className = "seat";
-        const name = Object.entries(currentAssignments).find(([_, s]) => s === seatCode)?.[0];
-        seatDiv.textContent = name || "空席";
-        if (name) {
-          seatDiv.classList.add("occupied");
-        } else {
-          seatDiv.classList.add("empty");
-        }
-        seatsGrid.appendChild(seatDiv);
+    class SeatDisplayApp {
+      constructor() {
+        this.utils = window.seatAppUtils;
+        this.layout = document.getElementById("layout");
+        this.loadingOverlay = document.getElementById("loadingOverlay");
+        this.tableSeatCounts = {};
+        this.currentAssignments = {};
+        this.init();
       }
 
-      tableBlock.appendChild(seatsGrid);
-      return tableBlock;
-    }
+      async init() {
+        try {
+          this.showLoading(true);
 
-    function createQRBlock() {
-      const qrBlock = document.createElement("div");
-      qrBlock.className = "qr-block";
-      qrBlock.innerHTML = `
-        <p>スマホで確認</p>
-        <img src="/qr_seatapp.png" alt="座席一覧QRコード" />
-      `;
-      return qrBlock;
-    }
-
-    function renderLayout() {
-      layout.innerHTML = "";
-      
-      // テーブルを4つずつの行に分割
-      const tablesPerRow = 4;
-      let tableIndex = 0;
-
-      while (tableIndex < tableNames.length) {
-        const row = document.createElement("div");
-        row.className = "table-row";
-
-        // 1行に最大4テーブル配置
-        for (let i = 0; i < tablesPerRow && tableIndex < tableNames.length; i++) {
-          const tableName = tableNames[tableIndex];
-          row.appendChild(createTableBlock(tableName));
-          tableIndex++;
-        }
-
-        // 最後の行の場合、残りのスロットにQRコードを配置
-        if (tableIndex >= tableNames.length) {
-          const remainingSlots = tablesPerRow - row.children.length;
-          // 残りがあればQRを追加（最後の位置に）
-          if (remainingSlots > 0 || row.children.length === tablesPerRow) {
-            // 最後のテーブルの後にQRを追加（次の行として）
+          // 管理者モードの確認
+          if (this.utils.isAdminMode()) {
+            document.getElementById("adminResetBtn").style.display = "inline-block";
+            document.getElementById("adminLinks").classList.add("show");
           }
+
+          // 設定とデータを並行読み込み
+          await this.loadInitialData();
+
+          // リアルタイムリスナーを設定
+          this.setupRealtimeListeners();
+
+        } catch (error) {
+          console.error('初期化エラー:', error);
+          this.showError('アプリケーションの初期化に失敗しました');
+        } finally {
+          this.showLoading(false);
+        }
+      }
+
+      async loadInitialData() {
+        const settings = await this.utils.getSettings();
+        this.tableSeatCounts = settings.tables;
+        this.utils.log('設定読み込み完了', settings);
+      }
+
+      setupRealtimeListeners() {
+        this.utils.addListener('assignments', (assignments) => {
+          this.currentAssignments = assignments || {};
+          this.renderAllTables();
+        }, 'seatDisplay');
+      }
+
+      renderAllTables() {
+        if (!this.layout) return;
+
+        this.layout.innerHTML = "";
+        const tableKeys = Object.keys(this.tableSeatCounts).sort();
+
+        if (tableKeys.length === 0) {
+          this.renderNoTablesMessage();
+          return;
         }
 
-        layout.appendChild(row);
-      }
-
-      // QRコードを最終行に追加（独立した行として、または最後の行に追加）
-      const lastRow = layout.lastElementChild;
-      if (lastRow && lastRow.children.length < tablesPerRow) {
-        // 最後の行に空きがあればQRを追加
-        lastRow.appendChild(createQRBlock());
-      } else {
-        // 空きがなければ新しい行を作成
-        const qrRow = document.createElement("div");
-        qrRow.className = "table-row";
-        qrRow.appendChild(createQRBlock());
-        layout.appendChild(qrRow);
-      }
-
-      adjustScale();
-    }
-
-    firebase.database().ref("assignments").on("value", snapshot => {
-      currentAssignments = snapshot.val() || {};
-      renderLayout();
-    });
-
-    // Firebaseからテーブル設定を取得（オプション）
-    firebase.database().ref("tableConfig").on("value", snapshot => {
-      const config = snapshot.val();
-      if (config) {
-        // テーブル設定が存在する場合は更新
-        Object.keys(config).forEach(table => {
-          if (config[table] && config[table].seats) {
-            tableSeatCounts[table] = Math.min(config[table].seats, 10); // 最大10席
+        // テーブルを配置
+        tableKeys.forEach(block => {
+          const tableBlock = this.renderTableBlock(block);
+          if (tableBlock) {
+            this.layout.appendChild(tableBlock);
           }
         });
-        // tableNamesを更新
-        tableNames.length = 0;
-        tableNames.push(...Object.keys(tableSeatCounts));
-        renderLayout();
+
+        // QRコードをグリッドの最後に配置
+        this.appendQRCode();
       }
+
+      renderTableBlock(block) {
+        const config = this.tableSeatCounts[block];
+        if (!config) return null;
+
+        // オブジェクト形式: {seats: number, enabled: boolean} または従来の数値形式に対応
+        let count, enabled;
+        if (typeof config === 'object') {
+          count = config.seats;
+          enabled = config.enabled !== false;
+        } else {
+          count = config;
+          enabled = true;
+        }
+
+        // 無効なテーブルまたは座席数0は表示しない
+        if (!enabled || !count || count <= 0) return null;
+
+        const tableBlock = this.utils.createElement("div", "table-block");
+
+        // テーブルラベル
+        const label = this.utils.createElement("div", "table-label", `テーブル${block}`);
+        tableBlock.appendChild(label);
+
+        // 座席行
+        const seatsRow = this.utils.createElement("div", "seats-row");
+
+        for (let i = 1; i <= count; i++) {
+          const seatCode = `${block}${i}`;
+          const seatDiv = this.createSeatElement(seatCode);
+          seatsRow.appendChild(seatDiv);
+        }
+
+        tableBlock.appendChild(seatsRow);
+        return tableBlock;
+      }
+
+      createSeatElement(seatCode) {
+        const seatDiv = this.utils.createElement("div", "seat");
+        const occupant = this.findSeatOccupant(seatCode);
+
+        seatDiv.textContent = occupant || "空席";
+        seatDiv.setAttribute('data-seat', seatCode);
+        seatDiv.setAttribute('aria-label', `座席${seatCode}: ${occupant || '空席'}`);
+
+        if (!occupant) {
+          seatDiv.classList.add("empty");
+        }
+
+        // アクセシビリティ向上
+        seatDiv.setAttribute('tabindex', '0');
+        seatDiv.setAttribute('role', 'button');
+
+        return seatDiv;
+      }
+
+      findSeatOccupant(seatCode) {
+        return Object.entries(this.currentAssignments).find(([_, seat]) => seat === seatCode)?.[0];
+      }
+
+      appendQRCode() {
+        const template = document.getElementById("qr-template");
+        if (template) {
+          const qrContent = template.firstElementChild.cloneNode(true);
+          this.layout.appendChild(qrContent);
+        }
+      }
+
+      renderNoTablesMessage() {
+        const message = this.utils.createElement("div", "");
+        message.innerHTML = `
+          <p style="text-align: center; color: #666; font-size: 1.2rem; margin: 3rem 0;">
+            📋 テーブル設定がありません<br>
+            <small>管理者画面でテーブル設定を行ってください</small>
+          </p>
+        `;
+        this.layout.appendChild(message);
+      }
+
+      async resetAssignments() {
+        const confirmed = await this.utils.confirm("全ての割り当てをリセットしてもよろしいですか？");
+        if (!confirmed) return;
+
+        try {
+          this.showLoading(true);
+          const success = await this.utils.removeData("assignments");
+
+          if (success) {
+            this.utils.log('割り当てリセット完了');
+          } else {
+            this.showError('リセットに失敗しました');
+          }
+        } catch (error) {
+          console.error('リセットエラー:', error);
+          this.showError('リセット処理でエラーが発生しました');
+        } finally {
+          this.showLoading(false);
+        }
+      }
+
+      showLoading(isLoading) {
+        if (this.loadingOverlay) {
+          this.loadingOverlay.classList.toggle('hidden', !isLoading);
+        }
+      }
+
+      showError(message) {
+        // 簡単なエラー表示（本来はtoastなどが望ましい）
+        alert(`エラー: ${message}`);
+      }
+
+      destroy() {
+        this.utils.removeListeners('seatDisplay');
+      }
+    }
+
+    // グローバル関数（既存のHTMLから呼び出されるため）
+    function resetAssignments() {
+      if (window.seatDisplayApp) {
+        window.seatDisplayApp.resetAssignments();
+      }
+    }
+
+    // アプリ初期化
+    document.addEventListener('DOMContentLoaded', () => {
+      window.seatDisplayApp = new SeatDisplayApp();
     });
 
-    // ウィンドウリサイズ時にスケール調整
-    window.addEventListener("resize", adjustScale);
-    window.addEventListener("load", adjustScale);
-
-    function resetAssignments() {
-      if (confirm("全ての席割り当てをリセットしてもよろしいですか？")) {
-        firebase.database().ref("assignments").remove();
-      }
-    }
-
-    // URL に ?admin=true があればリセットボタンを表示
-    if (window.location.search.includes("admin=true")) {
-      resetBtn.style.display = "inline-block";
-    }
+    // ページ離脱時のクリーンアップ
+    window.addEventListener('beforeunload', () => {
+      window.seatDisplayApp?.destroy();
+    });
   </script>
 </body>
+
 </html>
