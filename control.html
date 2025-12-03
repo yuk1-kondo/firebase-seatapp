@@ -8,31 +8,76 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
   <style>
-    body { margin:0; padding:1em; font-family:sans-serif; background:#e3f2fd; text-align:center; color:#333; }
-    h1   { margin:.2em 0 .8em; font-size:1.6em; }
+    body {
+      margin: 0;
+      padding: 1em;
+      font-family: sans-serif;
+      background: #e8edf2;
+      color: #37474f;
+      text-align: center;
+    }
+    h1 {
+      margin: .2em 0 .8em;
+      font-size: 1.6em;
+      color: #ff750f;
+    }
     #nameButtons {
       display:grid;
       grid-template-columns:repeat(8,1fr);
       gap:10px; max-width:900px; margin:0 auto 1.5em;
     }
     #nameButtons button {
-      padding:14px; border:none; border-radius:10px;
-      background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.1);
-      font-size:1em; white-space:nowrap;
-      transition:transform .1s;
+      padding: 14px;
+      border: 1px solid #d7e0e8;
+      border-radius: 10px;
+      background: #f6f8fa;
+      box-shadow: 0 2px 6px rgba(55, 71, 79, 0.08);
+      font-size: 1em;
+      color: #37474f;
+      white-space: nowrap;
+      transition: transform .1s, background .1s;
     }
-    #nameButtons button:hover:not(:disabled) { transform:scale(1.05); background:#bbdefb; cursor:pointer; }
-    #nameButtons button.selected { background:#42a5f5; color:#fff; }
-    #nameButtons button:disabled { background:#eee; color:#999; }
+    #nameButtons button:hover:not(:disabled) {
+      transform: scale(1.03);
+      background: #e2e8ed;
+      cursor: pointer;
+    }
+    #nameButtons button.selected {
+      background: #546e7a;
+      border-color: #546e7a;
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(84, 110, 122, 0.25);
+    }
+    #nameButtons button:disabled {
+      background: #e0e5ea;
+      color: #9aa6af;
+      border-color: #d7e0e8;
+      box-shadow: none;
+    }
     #nameButtons button.long { font-size:.85em; }
 
     #lotteryBtn {
-      padding:18px 30px; font-size:1.4em; border:none; border-radius:10px;
-      width:90%; max-width:600px; color:#fff; background:#1e88e5; margin-bottom:1em;
+      padding: 18px 30px;
+      font-size: 1.4em;
+      border: none;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      color: #fff;
+      background: #ff750f;
+      margin-bottom: 1em;
+      box-shadow: 0 4px 12px rgba(255, 117, 15, 0.25);
     }
-    #lotteryBtn.stop { background:#e53935; }
+    #lotteryBtn.stop {
+      background: #d84315;
+      box-shadow: 0 4px 12px rgba(216, 67, 21, 0.25);
+    }
 
-    #result { font-size:1.5em; margin-bottom:1em; }
+    #result {
+      font-size: 1.5em;
+      margin-bottom: 1em;
+      color: #37474f;
+    }
   </style>
 </head>
 <body>
