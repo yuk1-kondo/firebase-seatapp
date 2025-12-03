@@ -8,73 +8,135 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="./firebase-config.js"></script>
   <style>
+    :root {
+      --base-width: 1400;
+      --scale: 1;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow-x: hidden;
+    }
     body {
       font-family: sans-serif;
       background: #f0f8ff;
-      margin: 0;
-      padding: 1em;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 1em;
     }
     h1 {
       margin-top: 0.5em;
       font-size: 1.8em;
+      flex-shrink: 0;
+    }
+    #scale-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex: 1;
+      overflow: hidden;
+    }
+    #layout-wrapper {
+      transform-origin: top center;
+      transition: transform 0.2s ease;
     }
     #layout {
-      max-width: 95vw;
+      width: 1400px;
       margin: 0 auto;
-      padding: 0 1em;
-      box-sizing: border-box;
+      padding: 1em;
     }
     .pair-row {
       display: flex;
       justify-content: center;
       gap: 2em;
-      margin-bottom: 3em;
-      flex-wrap: wrap;
+      margin-bottom: 2em;
     }
     .table-block {
       display: flex;
       flex-direction: column;
       align-items: center;
+      background: #e8e8e8;
+      border-radius: 15px;
+      padding: 15px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .table-label {
       font-weight: bold;
       margin-bottom: 0.5em;
+      color: #e65100;
+      font-size: 1.1em;
     }
     .seats-row {
       display: flex;
       flex-direction: row;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 8px;
       justify-content: center;
     }
+    .seats-grid {
+      display: grid;
+      gap: 8px;
+    }
+    .seats-grid.cols-5 {
+      grid-template-columns: repeat(5, 1fr);
+    }
+    .seats-grid.cols-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .seats-grid.cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
     .seat {
-      width: 90px;
-      height: 60px;
+      width: 70px;
+      height: 50px;
       padding: 5px;
-      border-radius: 10px;
-      background-color: #bbdefb;
+      border-radius: 8px;
+      background-color: transparent;
+      border: 2px dashed #bbb;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-size: 0.9em;
+      font-size: 0.85em;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #999;
     }
-    .empty {
-      background-color: #ffcdd2;
+    .seat.occupied {
+      background-color: #455a64;
+      border: none;
+      color: white;
+      font-weight: bold;
+    }
+    .seat.empty {
+      background-color: transparent;
+      border: 2px dashed #bbb;
+      color: #999;
     }
     #qr-section {
-      margin-top: 2em;
+      margin-top: 1.5em;
+      flex-shrink: 0;
+      background: #e8e8e8;
+      border-radius: 15px;
+      padding: 15px 25px;
+      display: inline-block;
     }
     #qr-section p {
-      font-size: 1em;
-      margin-bottom: 1em;
+      font-size: 0.9em;
+      margin-bottom: 0.8em;
+      color: #555;
     }
     #qr-code {
-      max-width: 180px;
+      max-width: 120px;
       height: auto;
     }
     #resetBtn {
@@ -88,25 +150,24 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    @media (max-width: 600px) {
-      .seat {
-        width: 70px;
-        height: 50px;
-        font-size: 0.8em;
-      }
-      h1 {
-        font-size: 1.2em;
-      }
+    h1 {
+      color: #e65100;
+      border-bottom: 3px solid #e65100;
+      padding-bottom: 0.3em;
+      display: inline-block;
     }
   </style>
 </head>
 <body>
-  <h1>桜和会2025 歓送迎会 リアルタイム座席一覧表</h1>
-  <div id="layout"></div>
-
-  <div id="qr-section">
-    <p>QRコードを読み込めばお手元のスマホでも座席一覧が確認できます📱</p>
-    <img id="qr-code" src="/qr_seatapp.png" alt="座席一覧QRコード" />
+  <h1>桜和会2025 忘年会 座席一覧表</h1>
+  <div id="scale-container">
+    <div id="layout-wrapper">
+      <div id="layout"></div>
+      <div id="qr-section">
+        <p>スマホで確認</p>
+        <img id="qr-code" src="/qr_seatapp.png" alt="座席一覧QRコード" />
+      </div>
+    </div>
   </div>
 
   <button id="resetBtn" onclick="resetAssignments()">🔄 割り当てをリセット</button>
@@ -114,14 +175,37 @@
   <script>
     const layout = document.getElementById("layout");
     const resetBtn = document.getElementById("resetBtn");
+    const layoutWrapper = document.getElementById("layout-wrapper");
+    const scaleContainer = document.getElementById("scale-container");
+    
     const tableSeatCounts = {
-      A: 5, B: 5, C: 5, D: 5,
-      E: 4, F: 4, G: 4, H: 4,
-      I: 6, J: 6,
-      K: 8, L: 7
+      A: 6, B: 5, C: 5, D: 5, E: 4,
+      F: 4, G: 2, H: 2, I: 2, J: 2,
+      K: 10, L: 6
+    };
+
+    // テーブルごとのグリッド列数設定
+    const tableGridCols = {
+      A: 6, B: 5, C: 5, D: 5, E: 4,
+      F: 4, G: 2, H: 2, I: 2, J: 2,
+      K: 5, L: 5
     };
 
     let currentAssignments = {};
+
+    // 画面サイズに合わせてスケールを調整
+    function adjustScale() {
+      const containerWidth = scaleContainer.offsetWidth;
+      const containerHeight = window.innerHeight - 100; // ヘッダー分を引く
+      const layoutWidth = 1400;
+      const layoutHeight = 700;
+      
+      const scaleX = (containerWidth - 40) / layoutWidth;
+      const scaleY = (containerHeight - 40) / layoutHeight;
+      const scale = Math.min(scaleX, scaleY, 1.5); // 最大1.5倍まで
+      
+      layoutWrapper.style.transform = `scale(${Math.max(scale, 0.5)})`;
+    }
 
     function renderGroup(blocks) {
       const row = document.createElement("div");
@@ -135,8 +219,11 @@
         label.textContent = `テーブル${block}`;
         tableBlock.appendChild(label);
 
-        const seatsRow = document.createElement("div");
-        seatsRow.className = "seats-row";
+        const seatsGrid = document.createElement("div");
+        seatsGrid.className = "seats-grid";
+        
+        const cols = tableGridCols[block];
+        seatsGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
         const count = tableSeatCounts[block];
         for (let i = 1; i <= count; i++) {
@@ -145,11 +232,15 @@
           seatDiv.className = "seat";
           const name = Object.entries(currentAssignments).find(([_, s]) => s === seatCode)?.[0];
           seatDiv.textContent = name || "空席";
-          if (!name) seatDiv.classList.add("empty");
-          seatsRow.appendChild(seatDiv);
+          if (name) {
+            seatDiv.classList.add("occupied");
+          } else {
+            seatDiv.classList.add("empty");
+          }
+          seatsGrid.appendChild(seatDiv);
         }
 
-        tableBlock.appendChild(seatsRow);
+        tableBlock.appendChild(seatsGrid);
         row.appendChild(tableBlock);
       });
       layout.appendChild(row);
@@ -158,12 +249,15 @@
     firebase.database().ref("assignments").on("value", snapshot => {
       currentAssignments = snapshot.val() || {};
       layout.innerHTML = "";
-      renderGroup(["A", "B"]);
-      renderGroup(["C", "D"]);
-      renderGroup(["E", "F", "G", "H"]);
-      renderGroup(["I", "J"]);
+      renderGroup(["A", "B", "C", "D", "E"]);
+      renderGroup(["F", "G", "H", "I", "J"]);
       renderGroup(["K", "L"]);
+      adjustScale();
     });
+
+    // ウィンドウリサイズ時にスケール調整
+    window.addEventListener("resize", adjustScale);
+    window.addEventListener("load", adjustScale);
 
     function resetAssignments() {
       if (confirm("全ての席割り当てをリセットしてもよろしいですか？")) {
