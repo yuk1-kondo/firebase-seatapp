@@ -9,7 +9,7 @@
   <script src="./firebase-config.js"></script>
   <style>
     :root {
-      --base-width: 1400;
+      --base-width: 1200;
       --scale: 1;
     }
     * {
@@ -36,6 +36,10 @@
       margin-top: 0.5em;
       font-size: 1.8em;
       flex-shrink: 0;
+      color: #e65100;
+      border-bottom: 3px solid #e65100;
+      padding-bottom: 0.3em;
+      display: inline-block;
     }
     #scale-container {
       width: 100%;
@@ -50,15 +54,16 @@
       transition: transform 0.2s ease;
     }
     #layout {
-      width: 1400px;
+      width: 1200px;
       margin: 0 auto;
       padding: 1em;
     }
-    .pair-row {
-      display: flex;
-      justify-content: center;
-      gap: 2em;
-      margin-bottom: 2em;
+    .table-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5em;
+      margin-bottom: 1.5em;
+      justify-items: center;
     }
     .table-block {
       display: flex;
@@ -66,46 +71,35 @@
       align-items: center;
       background: #e8e8e8;
       border-radius: 15px;
-      padding: 15px 20px;
+      padding: 12px 15px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: 260px;
+      min-height: 120px;
     }
     .table-label {
       font-weight: bold;
       margin-bottom: 0.5em;
       color: #e65100;
-      font-size: 1.1em;
-    }
-    .seats-row {
-      display: flex;
-      flex-direction: row;
-      gap: 8px;
-      justify-content: center;
+      font-size: 1em;
     }
     .seats-grid {
       display: grid;
-      gap: 8px;
-    }
-    .seats-grid.cols-5 {
       grid-template-columns: repeat(5, 1fr);
-    }
-    .seats-grid.cols-4 {
-      grid-template-columns: repeat(4, 1fr);
-    }
-    .seats-grid.cols-2 {
-      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      width: 100%;
     }
     .seat {
-      width: 70px;
-      height: 50px;
-      padding: 5px;
-      border-radius: 8px;
+      width: 100%;
+      aspect-ratio: 1.4;
+      padding: 3px;
+      border-radius: 6px;
       background-color: transparent;
       border: 2px dashed #bbb;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-size: 0.85em;
+      font-size: 0.75em;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -122,21 +116,25 @@
       border: 2px dashed #bbb;
       color: #999;
     }
-    #qr-section {
-      margin-top: 1.5em;
-      flex-shrink: 0;
+    .qr-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       background: #e8e8e8;
       border-radius: 15px;
-      padding: 15px 25px;
-      display: inline-block;
+      padding: 12px 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: 260px;
+      min-height: 120px;
     }
-    #qr-section p {
-      font-size: 0.9em;
-      margin-bottom: 0.8em;
+    .qr-block p {
+      font-size: 0.85em;
+      margin: 0 0 0.5em 0;
       color: #555;
     }
-    #qr-code {
-      max-width: 120px;
+    .qr-block img {
+      max-width: 80px;
       height: auto;
     }
     #resetBtn {
@@ -150,12 +148,6 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    h1 {
-      color: #e65100;
-      border-bottom: 3px solid #e65100;
-      padding-bottom: 0.3em;
-      display: inline-block;
-    }
   </style>
 </head>
 <body>
@@ -163,10 +155,6 @@
   <div id="scale-container">
     <div id="layout-wrapper">
       <div id="layout"></div>
-      <div id="qr-section">
-        <p>スマホで確認</p>
-        <img id="qr-code" src="/qr_seatapp.png" alt="座席一覧QRコード" />
-      </div>
     </div>
   </div>
 
@@ -178,81 +166,140 @@
     const layoutWrapper = document.getElementById("layout-wrapper");
     const scaleContainer = document.getElementById("scale-container");
     
+    // テーブルごとの席数（Firebaseから取得するか、ここで定義）
+    // 最大10席まで対応
     const tableSeatCounts = {
-      A: 6, B: 5, C: 5, D: 5, E: 4,
-      F: 4, G: 2, H: 2, I: 2, J: 2,
-      K: 10, L: 6
+      A: 6, B: 5, C: 5, D: 5,
+      E: 4, F: 4, G: 2, H: 2,
+      I: 2, J: 2, K: 10, L: 6
     };
 
-    // テーブルごとのグリッド列数設定
-    const tableGridCols = {
-      A: 6, B: 5, C: 5, D: 5, E: 4,
-      F: 4, G: 2, H: 2, I: 2, J: 2,
-      K: 5, L: 5
-    };
+    // テーブル名のリスト（順番通り）
+    const tableNames = Object.keys(tableSeatCounts);
 
     let currentAssignments = {};
 
     // 画面サイズに合わせてスケールを調整
     function adjustScale() {
       const containerWidth = scaleContainer.offsetWidth;
-      const containerHeight = window.innerHeight - 100; // ヘッダー分を引く
-      const layoutWidth = 1400;
-      const layoutHeight = 700;
+      const containerHeight = window.innerHeight - 100;
+      const layoutWidth = 1200;
+      const layoutHeight = layoutWrapper.scrollHeight || 600;
       
       const scaleX = (containerWidth - 40) / layoutWidth;
       const scaleY = (containerHeight - 40) / layoutHeight;
-      const scale = Math.min(scaleX, scaleY, 1.5); // 最大1.5倍まで
+      const scale = Math.min(scaleX, scaleY, 1.5);
       
-      layoutWrapper.style.transform = `scale(${Math.max(scale, 0.5)})`;
+      layoutWrapper.style.transform = `scale(${Math.max(scale, 0.4)})`;
     }
 
-    function renderGroup(blocks) {
-      const row = document.createElement("div");
-      row.className = "pair-row";
-      blocks.forEach(block => {
-        const tableBlock = document.createElement("div");
-        tableBlock.className = "table-block";
+    function createTableBlock(tableName) {
+      const tableBlock = document.createElement("div");
+      tableBlock.className = "table-block";
 
-        const label = document.createElement("div");
-        label.className = "table-label";
-        label.textContent = `テーブル${block}`;
-        tableBlock.appendChild(label);
+      const label = document.createElement("div");
+      label.className = "table-label";
+      label.textContent = `テーブル${tableName}`;
+      tableBlock.appendChild(label);
 
-        const seatsGrid = document.createElement("div");
-        seatsGrid.className = "seats-grid";
-        
-        const cols = tableGridCols[block];
-        seatsGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      const seatsGrid = document.createElement("div");
+      seatsGrid.className = "seats-grid";
 
-        const count = tableSeatCounts[block];
-        for (let i = 1; i <= count; i++) {
-          const seatCode = `${block}${i}`;
-          const seatDiv = document.createElement("div");
-          seatDiv.className = "seat";
-          const name = Object.entries(currentAssignments).find(([_, s]) => s === seatCode)?.[0];
-          seatDiv.textContent = name || "空席";
-          if (name) {
-            seatDiv.classList.add("occupied");
-          } else {
-            seatDiv.classList.add("empty");
-          }
-          seatsGrid.appendChild(seatDiv);
+      const count = tableSeatCounts[tableName];
+      for (let i = 1; i <= count; i++) {
+        const seatCode = `${tableName}${i}`;
+        const seatDiv = document.createElement("div");
+        seatDiv.className = "seat";
+        const name = Object.entries(currentAssignments).find(([_, s]) => s === seatCode)?.[0];
+        seatDiv.textContent = name || "空席";
+        if (name) {
+          seatDiv.classList.add("occupied");
+        } else {
+          seatDiv.classList.add("empty");
+        }
+        seatsGrid.appendChild(seatDiv);
+      }
+
+      tableBlock.appendChild(seatsGrid);
+      return tableBlock;
+    }
+
+    function createQRBlock() {
+      const qrBlock = document.createElement("div");
+      qrBlock.className = "qr-block";
+      qrBlock.innerHTML = `
+        <p>スマホで確認</p>
+        <img src="/qr_seatapp.png" alt="座席一覧QRコード" />
+      `;
+      return qrBlock;
+    }
+
+    function renderLayout() {
+      layout.innerHTML = "";
+      
+      // テーブルを4つずつの行に分割
+      const tablesPerRow = 4;
+      let tableIndex = 0;
+
+      while (tableIndex < tableNames.length) {
+        const row = document.createElement("div");
+        row.className = "table-row";
+
+        // 1行に最大4テーブル配置
+        for (let i = 0; i < tablesPerRow && tableIndex < tableNames.length; i++) {
+          const tableName = tableNames[tableIndex];
+          row.appendChild(createTableBlock(tableName));
+          tableIndex++;
         }
 
-        tableBlock.appendChild(seatsGrid);
-        row.appendChild(tableBlock);
-      });
-      layout.appendChild(row);
+        // 最後の行の場合、残りのスロットにQRコードを配置
+        if (tableIndex >= tableNames.length) {
+          const remainingSlots = tablesPerRow - row.children.length;
+          // 残りがあればQRを追加（最後の位置に）
+          if (remainingSlots > 0 || row.children.length === tablesPerRow) {
+            // 最後のテーブルの後にQRを追加（次の行として）
+          }
+        }
+
+        layout.appendChild(row);
+      }
+
+      // QRコードを最終行に追加（独立した行として、または最後の行に追加）
+      const lastRow = layout.lastElementChild;
+      if (lastRow && lastRow.children.length < tablesPerRow) {
+        // 最後の行に空きがあればQRを追加
+        lastRow.appendChild(createQRBlock());
+      } else {
+        // 空きがなければ新しい行を作成
+        const qrRow = document.createElement("div");
+        qrRow.className = "table-row";
+        qrRow.appendChild(createQRBlock());
+        layout.appendChild(qrRow);
+      }
+
+      adjustScale();
     }
 
     firebase.database().ref("assignments").on("value", snapshot => {
       currentAssignments = snapshot.val() || {};
-      layout.innerHTML = "";
-      renderGroup(["A", "B", "C", "D", "E"]);
-      renderGroup(["F", "G", "H", "I", "J"]);
-      renderGroup(["K", "L"]);
-      adjustScale();
+      renderLayout();
+    });
+
+    // Firebaseからテーブル設定を取得（オプション）
+    firebase.database().ref("tableConfig").on("value", snapshot => {
+      const config = snapshot.val();
+      if (config) {
+        // テーブル設定が存在する場合は更新
+        Object.keys(config).forEach(table => {
+          if (config[table] && config[table].seats) {
+            tableSeatCounts[table] = Math.min(config[table].seats, 10); // 最大10席
+          }
+        });
+        // tableNamesを更新
+        tableNames.length = 0;
+        tableNames.push(...Object.keys(tableSeatCounts));
+        renderLayout();
+      }
     });
 
     // ウィンドウリサイズ時にスケール調整
