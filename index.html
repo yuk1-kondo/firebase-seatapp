@@ -11,10 +11,6 @@
   <script src="./utils.js"></script>
   <link rel="stylesheet" href="./common.css">
   <style>
-    #adminResetBtn {
-      display: none;
-    }
-
     .loading-overlay {
       position: fixed;
       top: 0;
@@ -45,14 +41,13 @@
   </div>
 
   <div class="container">
-    <div style="text-align: center; position: relative; margin-bottom: 1vh;">
-      <h1>桜和会2025 忘年会 座席一覧表</h1>
+    <div class="page-header">
+      <h1 id="listPageHeading">桜和会2025 忘年会 座席一覧表</h1>
       <div class="admin-links" id="adminLinks">
         <a href="admin.html">⚙️ 設定</a>
         <a href="control.html">🎰 ルーレット</a>
       </div>
-      <button id="adminResetBtn" class="btn btn-danger" onclick="resetAssignments()"
-        style="position: absolute; top: 0; left: 0;">🔄 リセット</button>
+      <button id="adminResetBtn" class="btn btn-danger" type="button" onclick="resetAssignments()">🔄 リセット</button>
     </div>
 
     <div id="layout" class="tables-container"></div>
@@ -83,7 +78,7 @@
 
           // 管理者モードの確認
           if (this.utils.isAdminMode()) {
-            document.getElementById("adminResetBtn").style.display = "inline-block";
+            document.getElementById("adminResetBtn").classList.add("is-visible");
             document.getElementById("adminLinks").classList.add("show");
           }
 
@@ -104,6 +99,10 @@
       async loadInitialData() {
         const settings = await this.utils.getSettings();
         this.tableSeatCounts = settings.tables;
+        const t = this.utils.getResolvedEventStrings(settings.event);
+        const headingEl = document.getElementById('listPageHeading');
+        if (headingEl) headingEl.textContent = t.listHeading;
+        document.title = t.indexDocTitle;
         this.utils.log('設定読み込み完了', settings);
       }
 

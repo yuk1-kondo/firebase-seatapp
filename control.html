@@ -11,40 +11,6 @@
   <link rel="stylesheet" href="./common.css">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    #nameButtons button {
-      padding: 1vh;
-      font-size: 1.6vh;
-      border: none;
-      border-radius: 8px;
-      background: white;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-      cursor: pointer;
-      height: 6vh;
-    }
-
-    #nameButtons button:hover:not(:disabled) {
-      background: var(--secondary-color);
-      color: white;
-      transform: scale(1.05);
-    }
-
-    #nameButtons button.selected {
-      background: var(--primary-color);
-      color: white;
-      box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
-    }
-
-    #nameButtons button:disabled {
-      background: #eee;
-      color: #999;
-      cursor: not-allowed;
-      transform: none;
-    }
-
     #result.roulette-animation {
       animation: rouletteSpin 0.1s infinite;
     }
@@ -61,10 +27,6 @@
       100% {
         transform: scale(1);
       }
-    }
-
-    #adminResetBtn {
-      display: none;
     }
 
     .loading-overlay {
@@ -87,71 +49,11 @@
     .no-members-message {
       text-align: center;
       color: #666;
-      font-size: 1.2rem;
-      margin: 3rem 0;
-      padding: 2rem;
+      font-size: clamp(0.95rem, calc(0.3rem + 1.5vmin), 1.2rem);
+      margin: clamp(1.5rem, 6vmin, 3rem) 0;
+      padding: clamp(1rem, 3vmin, 2rem);
       background: #f5f5f5;
       border-radius: var(--border-radius);
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-      #nameButtons {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-        padding: 8px;
-      }
-
-      #nameButtons button {
-        padding: 12px 8px;
-        font-size: 0.85rem;
-        height: auto;
-        min-height: 48px;
-      }
-
-      #control-footer {
-        height: auto;
-        padding: 16px;
-      }
-
-      #result {
-        font-size: 1.5rem;
-        min-height: 40px;
-        margin: 8px 0;
-      }
-
-      #control-buttons {
-        flex-direction: column;
-        width: 100%;
-        gap: 8px;
-      }
-
-      #control-buttons .btn {
-        width: 100%;
-        margin: 0;
-      }
-
-      .no-members-message {
-        font-size: 1rem;
-        margin: 1.5rem 0;
-        padding: 1rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      #nameButtons {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      #nameButtons button {
-        font-size: 0.8rem;
-        padding: 10px 6px;
-      }
-
-      #result {
-        font-size: 1.3rem;
-      }
     }
   </style>
 </head>
@@ -163,8 +65,8 @@
 
   <div class="container">
     <div id="control-layout">
-      <div style="text-align: center;">
-        <h1>桜和会2025 忘年会座席ルーレット</h1>
+      <div class="page-header">
+        <h1 id="roulettePageHeading">桜和会2025 忘年会座席ルーレット</h1>
         <div class="admin-links" id="adminLinks">
           <a href="admin.html">⚙️ 設定</a>
           <a href="index.html">📋 座席表示</a>
@@ -212,7 +114,7 @@
 
           // 管理者モードの確認
           if (this.utils.isAdminMode()) {
-            document.getElementById("adminResetBtn").style.display = "inline-block";
+            document.getElementById("adminResetBtn").classList.add("is-visible");
             document.getElementById("adminLinks").classList.add("show");
           }
 
@@ -242,6 +144,11 @@
 
         // 初回ボタン描画
         this.renderButtons();
+
+        const t = this.utils.getResolvedEventStrings(settings.event);
+        const headingEl = document.getElementById('roulettePageHeading');
+        if (headingEl) headingEl.textContent = t.rouletteHeading;
+        document.title = t.rouletteDocTitle;
 
         this.utils.log('設定読み込み完了', {
           membersCount: this.knownMembers.length,

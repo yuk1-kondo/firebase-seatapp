@@ -36,12 +36,20 @@
   --font-main: 'Inter', 'Noto Sans JP', sans-serif;
   --font-heading: 'Roboto', 'Noto Sans JP', sans-serif;
 
-  /* フレキシブルサイズ変数 */
+  /* フレキシブルサイズ変数（vmin で向き・スマホ/タブレット/PC に追従） */
   --seat-size: clamp(50px, 7vh, 80px);
   --seat-font: clamp(10px, 1.6vh, 16px);
-  --btn-padding-y: clamp(8px, 1vh, 14px);
-  --btn-padding-x: clamp(12px, 1.5vw, 24px);
-  --btn-font: clamp(12px, 1.8vh, 16px);
+  --btn-touch-min: 44px;
+  --btn-padding-y: clamp(8px, 1.4vmin, 16px);
+  --btn-padding-x: clamp(12px, 2.4vmin, 28px);
+  --btn-font: clamp(0.75rem, calc(0.2rem + 1.15vmin), 1rem);
+  --btn-min-h: max(var(--btn-touch-min), clamp(40px, 5.5vmin, 54px));
+  --btn-min-w: clamp(76px, 14vmin, 168px);
+  --btn-large-pad-y: clamp(12px, 2vmin, 22px);
+  --btn-large-pad-x: clamp(18px, 3.5vmin, 40px);
+  --btn-large-font: clamp(0.9rem, calc(0.35rem + 1.6vmin), 1.35rem);
+  --btn-large-min-h: max(var(--btn-touch-min), clamp(48px, 7vmin, 64px));
+  --btn-large-min-w: clamp(140px, 22vmin, 280px);
   --heading-font: clamp(18px, 2.5vh, 28px);
   --label-font: clamp(14px, 2vh, 20px);
 }
@@ -82,10 +90,16 @@ h1 {
   text-align: center;
   font-size: var(--heading-font);
   margin-bottom: clamp(10px, 1.5vh, 20px);
-  text-transform: uppercase;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  word-break: break-word;
   border-bottom: 3px solid var(--primary-color);
-  display: inline-block;
-  padding-bottom: clamp(4px, 0.5vh, 8px);
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding-bottom: clamp(8px, 1vh, 12px);
+  box-sizing: border-box;
 }
 
 h2 {
@@ -94,9 +108,12 @@ h2 {
   padding-left: 0.8rem;
   margin-bottom: clamp(8px, 1vh, 16px);
   color: var(--secondary-color);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
-/* Buttons */
+/* Buttons（ウィンドウ／ビューポートに連動） */
 .btn {
   padding: var(--btn-padding-y) var(--btn-padding-x);
   border: none;
@@ -105,15 +122,19 @@ h2 {
   font-size: var(--btn-font);
   font-weight: 600;
   font-family: var(--font-main);
-  margin: clamp(4px, 0.5vh, 8px);
+  margin: clamp(4px, 0.6vmin, 10px);
   transition: var(--transition);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: clamp(80px, 8vw, 120px);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  min-width: min(100%, var(--btn-min-w));
+  min-height: var(--btn-min-h);
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 
 .btn:disabled {
@@ -163,9 +184,10 @@ h2 {
 }
 
 .btn-large {
-  padding: clamp(12px, 1.5vh, 20px) clamp(24px, 3vw, 48px);
-  font-size: clamp(16px, 2.5vh, 24px);
-  min-width: clamp(150px, 15vw, 250px);
+  padding: var(--btn-large-pad-y) var(--btn-large-pad-x);
+  font-size: var(--btn-large-font);
+  min-width: min(100%, var(--btn-large-min-w));
+  min-height: var(--btn-large-min-h);
 }
 
 /* Forms */
@@ -178,9 +200,10 @@ label {
   margin-bottom: 0.5vh;
   font-weight: 600;
   color: var(--text-muted);
-  font-size: 1.5vh;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: clamp(0.8rem, 1.5vh, 0.95rem);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
 }
 
 input,
@@ -222,9 +245,37 @@ textarea {
 .section {
   margin-bottom: 2vh;
   padding: 1.5vh 1.5vw;
-  background: #fafafa;
+  background: var(--card-background);
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 見出し周り（座席一覧のリセットボタン位置など） */
+.page-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: clamp(8px, 1.5vh, 20px);
+  width: 100%;
+}
+
+.page-header #adminResetBtn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.page-header .navigation {
+  margin-bottom: 0;
+}
+
+#adminResetBtn {
+  display: none;
+}
+
+#adminResetBtn.is-visible {
+  display: inline-flex;
 }
 
 /* Status Messages */
@@ -270,14 +321,18 @@ textarea {
 .admin-links a {
   color: var(--secondary-color);
   text-decoration: none;
-  margin: 0 0.5vw;
-  padding: 0.5vh 1vw;
+  margin: 0 clamp(4px, 0.6vmin, 10px);
+  padding: clamp(6px, 1vmin, 12px) clamp(8px, 1.5vmin, 16px);
   border-radius: var(--border-radius);
   transition: var(--transition);
   font-weight: 600;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid transparent;
-  font-size: 1.5vh;
+  font-size: clamp(0.75rem, calc(0.15rem + 1.1vmin), 0.95rem);
+  min-height: clamp(36px, 5vmin, 44px);
+  box-sizing: border-box;
 }
 
 .navigation a:hover,
@@ -448,7 +503,34 @@ textarea {
   }
 
   .btn {
-    min-width: 10vw;
+    min-width: min(100%, clamp(88px, 16vmin, 200px));
+  }
+
+  .btn-large {
+    min-width: min(100%, clamp(160px, 28vmin, 320px));
+  }
+}
+
+/* タブレット: ボタンは横並び優先、幅は fluid */
+@media (min-width: 481px) and (max-width: 1024px) {
+  #control-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(8px, 2vmin, 16px);
+    width: 100%;
+  }
+
+  #control-buttons .btn {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: min(100%, clamp(160px, 38vw, 280px));
+    max-width: min(100%, 48%);
+    margin: clamp(3px, 0.5vmin, 6px);
+  }
+
+  #nameButtons.grid-4 {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(100px, 26vmin, 200px)), 1fr));
   }
 }
 
@@ -479,11 +561,61 @@ textarea {
   }
 
   .btn {
-    padding: 10px 16px;
-    font-size: 0.85rem;
     width: 100%;
-    margin: 4px 0;
-    min-width: unset;
+    max-width: 100%;
+    min-width: 0;
+    min-height: max(var(--btn-touch-min), var(--btn-min-h));
+    padding: clamp(10px, 2vmin, 14px) clamp(14px, 3vmin, 20px);
+    font-size: clamp(0.8rem, calc(0.2rem + 1.1vmin), 0.95rem);
+    margin: clamp(4px, 1vmin, 8px) 0;
+  }
+
+  .btn-large {
+    min-height: max(var(--btn-touch-min), var(--btn-large-min-h));
+    font-size: clamp(0.88rem, calc(0.25rem + 1.35vmin), 1.1rem);
+  }
+
+  #nameButtons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(6px, 1.5vmin, 12px);
+    padding: clamp(8px, 1.5vmin, 12px);
+  }
+
+  #nameButtons.grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #nameButtons button {
+    min-height: max(var(--btn-touch-min), 48px);
+    font-size: clamp(0.78rem, calc(0.18rem + 1.05vmin), 0.92rem);
+    padding: clamp(10px, 2vmin, 14px) clamp(8px, 2vmin, 12px);
+  }
+
+  #control-footer {
+    max-height: none;
+    min-height: 0;
+    padding: clamp(10px, 2vmin, 20px);
+  }
+
+  #result {
+    font-size: clamp(1.1rem, calc(0.4rem + 2.2vmin), 1.5rem);
+    min-height: 40px;
+    margin: clamp(6px, 1.5vmin, 12px) 0;
+  }
+
+  #control-buttons {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: clamp(8px, 2vmin, 12px);
+  }
+
+  #control-buttons .btn {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: none;
   }
 
   .seat {
@@ -536,8 +668,32 @@ textarea {
 
   .admin-links a {
     margin: 0;
-    padding: 8px 12px;
-    font-size: 0.8rem;
+    padding: clamp(10px, 2vmin, 14px) clamp(12px, 2.5vmin, 16px);
+    font-size: clamp(0.78rem, calc(0.15rem + 1vmin), 0.9rem);
+    min-height: var(--btn-touch-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navigation a {
+    min-height: var(--btn-touch-min);
+    padding: clamp(10px, 2vmin, 14px) clamp(12px, 2.5vmin, 16px);
+    font-size: clamp(0.78rem, calc(0.15rem + 1vmin), 0.9rem);
+  }
+
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .page-header #adminResetBtn.is-visible {
+    position: static;
+    order: -1;
+    align-self: flex-start;
+    margin: 0 0 0.25rem 0;
   }
 
   #qr-section {
@@ -579,9 +735,25 @@ textarea {
     font-size: 0.9rem;
   }
 
+  #nameButtons button {
+    font-size: clamp(0.74rem, calc(0.16rem + 1vmin), 0.86rem);
+    padding: clamp(8px, 1.8vmin, 12px) clamp(6px, 1.6vmin, 10px);
+    min-height: max(var(--btn-touch-min), 46px);
+  }
+
+  #result {
+    font-size: clamp(1rem, calc(0.35rem + 1.8vmin), 1.3rem);
+  }
+
   .btn {
-    padding: 10px 12px;
-    font-size: 0.8rem;
+    min-height: max(var(--btn-touch-min), 48px);
+    padding: clamp(10px, 2.2vmin, 14px) clamp(12px, 2.8vmin, 18px);
+    font-size: clamp(0.78rem, calc(0.18rem + 1.05vmin), 0.9rem);
+  }
+
+  .btn-large {
+    min-height: max(var(--btn-touch-min), 52px);
+    font-size: clamp(0.85rem, calc(0.22rem + 1.2vmin), 1rem);
   }
 }
 
@@ -679,37 +851,96 @@ a:focus-visible {
 #nameButtons {
   flex: 1;
   overflow-y: auto;
-  padding: 1vh;
+  padding: clamp(6px, 1.2vmin, 14px);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   background: white;
-  margin-bottom: 2vh;
+  margin-bottom: clamp(8px, 2vmin, 24px);
+  gap: clamp(6px, 1.2vmin, 14px);
+}
+
+/* ルーレット: 参加者ボタン（control.html と共通・画面サイズ連動） */
+#nameButtons.grid-4 {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(88px, 22vmin, 220px)), 1fr));
+}
+
+#nameButtons button {
+  padding: clamp(8px, 1.5vmin, 14px) clamp(6px, 1.8vmin, 12px);
+  font-size: clamp(0.7rem, calc(0.15rem + 1.05vmin), 1rem);
+  border: none;
+  border-radius: var(--border-radius);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: var(--transition);
+  cursor: pointer;
+  min-height: max(var(--btn-touch-min), clamp(42px, 7vmin, 58px));
+  height: auto;
+  width: 100%;
+  font-family: var(--font-main);
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+#nameButtons button:hover:not(:disabled) {
+  background: var(--secondary-color);
+  color: white;
+  transform: scale(1.03);
+}
+
+#nameButtons button.selected {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 8px rgba(255, 109, 0, 0.25);
+}
+
+#nameButtons button:disabled {
+  background: #eee;
+  color: #999;
+  cursor: not-allowed;
+  transform: none;
 }
 
 #control-footer {
-  height: 20vh;
+  height: auto;
+  min-height: clamp(120px, 20vh, 200px);
+  max-height: min(28vh, 260px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #fafafa;
   border-top: 1px solid var(--border-color);
-  padding: 1vh;
+  padding: clamp(8px, 1.5vmin, 16px);
+  flex-shrink: 0;
 }
 
 #result {
-  font-size: 4vh;
-  margin: 1vh 0;
+  font-size: clamp(1rem, calc(0.5rem + 2.8vmin), 2.25rem);
+  margin: clamp(6px, 1vmin, 14px) 0;
   text-align: center;
   font-weight: 700;
   color: var(--primary-color);
-  min-height: 5vh;
+  min-height: clamp(36px, 5vmin, 56px);
 }
 
 #control-buttons {
   display: flex;
-  gap: 1vw;
-  margin-top: 1vh;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(8px, 1.8vmin, 18px);
+  margin-top: clamp(6px, 1vmin, 12px);
+  width: 100%;
+}
+
+#control-buttons .btn {
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 /* Admin Screen Specifics */
@@ -717,6 +948,14 @@ a:focus-visible {
   flex: 1;
   overflow-y: auto;
   padding-right: 1vw;
+}
+
+@media (min-width: 900px) {
+  .admin-content {
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .table-item,
@@ -758,12 +997,13 @@ a:focus-visible {
 }
 
 .table-enabled-toggle {
-  padding: 0.5vh 1vh;
+  padding: clamp(6px, 1.2vmin, 12px) clamp(10px, 2vmin, 16px);
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1.4vh;
-  min-width: 4vw;
+  font-size: clamp(0.7rem, calc(0.1rem + 1.1vmin), 0.9rem);
+  min-width: clamp(52px, 12vmin, 88px);
+  min-height: max(36px, clamp(34px, 5vmin, 44px));
   font-weight: bold;
   transition: var(--transition);
 }
@@ -779,13 +1019,14 @@ a:focus-visible {
 }
 
 .delete-btn {
-  padding: 0.5vh 1vh;
+  padding: clamp(6px, 1.2vmin, 12px) clamp(10px, 2vmin, 16px);
   background: var(--error-color);
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1.4vh;
+  font-size: clamp(0.7rem, calc(0.1rem + 1.1vmin), 0.9rem);
+  min-height: max(36px, clamp(34px, 5vmin, 44px));
   white-space: nowrap;
 }
 

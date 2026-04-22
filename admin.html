@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理者設定画面 - 桜和会2025 忘年会</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="./firebase-config.js"></script>
+  <script src="./utils.js"></script>
+  <link rel="stylesheet" href="./common.css">
+  <style>
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    /* モバイル対応 */
+    @media (max-width: 768px) {
+      .section {
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .section h2 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+      }
+
+      .form-group {
+        margin-bottom: 12px;
+      }
+
+      .form-group label {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+      }
+
+      textarea {
+        min-height: 100px;
+        font-size: 0.9rem;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .table-item,
+      .fixed-item {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .table-item label {
+        min-width: 60px;
+        font-size: 0.9rem;
+      }
+
+      .table-item input[type="number"] {
+        width: 80px;
+        padding: 8px;
+      }
+
+      .table-enabled-toggle {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        min-width: 60px;
+      }
+
+      .delete-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+
+      .fixed-item input {
+        font-size: 0.9rem;
+        padding: 8px;
+      }
+
+      .navigation {
+        padding: 8px;
+      }
+
+      .navigation a {
+        display: block;
+        margin: 4px 0;
+        padding: 10px;
+        font-size: 0.85rem;
+      }
+
+      .btn {
+        margin: 4px 0;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 8px;
+      }
+
+      h1 {
+        font-size: 1rem;
+      }
+
+      .section h2 {
+        font-size: 0.9rem;
+      }
+
+      .table-item input[type="number"] {
+        width: 60px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading"></div>
+  </div>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>🛠️ 管理者設定画面</h1>
+      <div class="navigation">
+        <a href="index.html">📋 座席表示画面</a>
+        <a href="control.html">🎰 ルーレット画面</a>
+      </div>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="admin-content">
+      <!-- イベント表示設定 -->
+      <div class="section">
+        <h2>📣 イベント表示</h2>
+        <div class="form-group">
+          <label for="eventTitle">イベント名（短い名称・一覧・ルーレットの共通に使用）</label>
+          <input type="text" id="eventTitle" placeholder="例：桜和会2025 忘年会">
+        </div>
+        <div class="form-group">
+          <label for="eventListTitle">座席一覧の見出し（空欄なら「イベント名 + 座席一覧表」）</label>
+          <input type="text" id="eventListTitle" placeholder="空欄で自動">
+        </div>
+        <div class="form-group">
+          <label for="eventRouletteTitle">ルーレット画面の見出し（空欄なら「イベント名 + 座席ルーレット」）</label>
+          <input type="text" id="eventRouletteTitle" placeholder="空欄で自動">
+        </div>
+        <button class="btn btn-success" onclick="saveEventSettings()">💾 イベント表示を保存</button>
+        <button class="btn btn-secondary" onclick="loadEventSettings(false)">📥 現在のイベント表示を読み込み</button>
+      </div>
+
+      <!-- 参加者管理 -->
+      <div class="section">
+        <h2>👥 参加者管理</h2>
+        <div class="form-group">
+          <label for="membersList">参加者リスト（1行に1名ずつ入力してください）:</label>
+          <textarea id="membersList" placeholder="例：&#10;田中太郎&#10;山田花子&#10;佐藤次郎"></textarea>
+        </div>
+        <button class="btn btn-success" onclick="saveMembers()">💾 参加者リストを保存</button>
+        <button class="btn btn-secondary" onclick="loadMembers()">📥 現在の参加者リストを読み込み</button>
+      </div>
+
+      <!-- テーブル設定 -->
+      <div class="section">
+        <h2>🪑 テーブル設定</h2>
+        <div class="form-group">
+          <label>各テーブルの座席数を設定してください:</label>
+          <div class="grid grid-2" id="tableSettings">
+            <!-- JavaScriptで動的生成 -->
+          </div>
+        </div>
+        <div class="form-group">
+          <button class="btn btn-primary" onclick="addTable()">➕ テーブル追加</button>
+          <button class="btn btn-success" onclick="saveTables()">💾 テーブル設定を保存</button>
+          <button class="btn btn-secondary" onclick="loadTables()">📥 現在のテーブル設定を読み込み</button>
+        </div>
+      </div>
+
+      <!-- 固定席設定 -->
+      <div class="section">
+        <h2>📍 固定席設定</h2>
+        <div class="form-group">
+          <label>特定の参加者に固定席を設定できます:</label>
+          <div class="grid grid-2" id="fixedAssignments">
+            <!-- JavaScriptで動的生成 -->
+          </div>
+        </div>
+        <div class="form-group">
+          <button class="btn btn-primary" onclick="addFixedAssignment()">➕ 固定席追加</button>
+          <button class="btn btn-success" onclick="saveFixedAssignments()">💾 固定席設定を保存</button>
+          <button class="btn btn-secondary" onclick="loadFixedAssignments()">📥 現在の固定席設定を読み込み</button>
+        </div>
+      </div>
+
+      <!-- データ管理 -->
+      <div class="section">
+        <h2>🗑️ データ管理</h2>
+        <button class="btn btn-danger" onclick="resetAllAssignments()">全ての座席割り当てをリセット</button>
+        <button class="btn btn-danger" onclick="resetAllSettings()">全ての設定をリセット</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTables = {
+      A: 5,
+      B: 5,
+      C: 5,
+      D: 5,
+      E: 4,
+      F: 4,
+      G: 4,
+      H: 4,
+      I: 6,
+      J: 6,
+      K: 8,
+      L: 7
+    };
+    let currentFixed = {};
+    let currentMembers = [];
+
+    function showStatus(message, isError = false) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.className = `status ${isError ? 'error' : 'success'} show`;
+      statusDiv.textContent = message;
+      setTimeout(() => {
+        statusDiv.classList.remove('show');
+        setTimeout(() => statusDiv.textContent = '', 200);
+      }, 3000);
+    }
+
+    function applyAdminDocumentTitle() {
+      const e = window.seatAppUtils.normalizeEventFromDb({
+        title: document.getElementById('eventTitle').value.trim(),
+        listTitle: document.getElementById('eventListTitle').value.trim(),
+        rouletteTitle: document.getElementById('eventRouletteTitle').value.trim()
+      });
+      document.title = window.seatAppUtils.getResolvedEventStrings(e).adminDocTitle;
+    }
+
+    async function saveEventSettings() {
+      const title = document.getElementById('eventTitle').value.trim();
+      const listTitle = document.getElementById('eventListTitle').value.trim();
+      const rouletteTitle = document.getElementById('eventRouletteTitle').value.trim();
+      const ok = await window.seatAppUtils.setData('settings/event', { title, listTitle, rouletteTitle });
+      if (ok) {
+        showStatus('イベント表示を保存しました');
+        applyAdminDocumentTitle();
+      } else {
+        showStatus('イベント表示の保存に失敗しました', true);
+      }
+    }
+
+    async function loadEventSettings(silent = false) {
+      const ev = await window.seatAppUtils.getData('settings/event');
+      const e = window.seatAppUtils.normalizeEventFromDb(ev);
+      document.getElementById('eventTitle').value = e.title;
+      document.getElementById('eventListTitle').value = e.listTitle;
+      document.getElementById('eventRouletteTitle').value = e.rouletteTitle;
+      if (!silent) showStatus('イベント表示を読み込みました');
+      applyAdminDocumentTitle();
+    }
+
+    // 参加者管理
+    function saveMembers() {
+      const text = document.getElementById('membersList').value;
+      const members = text.split('\n').filter(name => name.trim()).map(name => name.trim());
+
+      if (members.length === 0) {
+        showStatus('参加者が入力されていません', true);
+        return;
+      }
+
+      firebase.database().ref('settings/members').set(members).then(() => {
+        showStatus(`${members.length}名の参加者を保存しました`);
+        currentMembers = members;
+      }).catch(error => {
+        showStatus('保存に失敗しました: ' + error.message, true);
+      });
+    }
+
+    function loadMembers() {
+      firebase.database().ref('settings/members').once('value').then(snapshot => {
+        const members = snapshot.val() || [];
+        document.getElementById('membersList').value = members.join('\n');
+        currentMembers = members;
+        showStatus(`${members.length}名の参加者を読み込みました`);
+      });
+    }
+
+    // テーブル設定
+    function renderTableSettings() {
+      const container = document.getElementById('tableSettings');
+      container.innerHTML = '';
+
+      Object.keys(currentTables).sort().forEach(tableId => {
+        const config = currentTables[tableId];
+        const isEnabled = typeof config === 'object' ? config.enabled !== false : true;
+        const seatCount = typeof config === 'object' ? config.seats : config;
+
+        const div = document.createElement('div');
+        div.className = `table-item ${!isEnabled ? 'disabled' : ''}`;
+        div.innerHTML = `
+          <label>テーブル ${tableId}:</label>
+          <input type="number" min="1" max="20" value="${seatCount}" 
+                 ${!isEnabled ? 'disabled' : ''}
+                 onchange="updateTableSeats('${tableId}', parseInt(this.value))">
+          <button class="table-enabled-toggle ${isEnabled ? 'enabled' : 'disabled'}" 
+                  onclick="toggleTableEnabled('${tableId}')">
+            ${isEnabled ? '有効' : '無効'}
+          </button>
+          <button class="delete-btn" onclick="removeTable('${tableId}')">削除</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateTableSeats(tableId, seats) {
+      const config = currentTables[tableId];
+      if (typeof config === 'object') {
+        currentTables[tableId] = {
+          ...config,
+          seats: seats
+        };
+      } else {
+        currentTables[tableId] = seats;
+      }
+    }
+
+    function toggleTableEnabled(tableId) {
+      const config = currentTables[tableId];
+      if (typeof config === 'object') {
+        currentTables[tableId] = {
+          ...config,
+          enabled: !config.enabled
+        };
+      } else {
+        currentTables[tableId] = {
+          seats: config,
+          enabled: false
+        };
+      }
+      renderTableSettings();
+    }
+
+    function addTable() {
+      const existingChars = Object.keys(currentTables).map(k => k.charCodeAt(0));
+      const nextCharCode = existingChars.length > 0 ? Math.max(...existingChars) + 1 : 65; // 'A'から開始
+      const nextChar = String.fromCharCode(nextCharCode);
+      currentTables[nextChar] = {
+        seats: 4,
+        enabled: true
+      };
+      renderTableSettings();
+    }
+
+    function removeTable(tableId) {
+      delete currentTables[tableId];
+      renderTableSettings();
+    }
+
+    function saveTables() {
+      firebase.database().ref('settings/tables').set(currentTables).then(() => {
+        showStatus('テーブル設定を保存しました');
+      }).catch(error => {
+        showStatus('保存に失敗しました: ' + error.message, true);
+      });
+    }
+
+    function loadTables() {
+      firebase.database().ref('settings/tables').once('value').then(snapshot => {
+        currentTables = snapshot.val() || currentTables;
+        renderTableSettings();
+        showStatus('テーブル設定を読み込みました');
+      });
+    }
+
+    // 固定席設定
+    function renderFixedAssignments() {
+      const container = document.getElementById('fixedAssignments');
+      container.innerHTML = '';
+
+      Object.keys(currentFixed).forEach(member => {
+        const div = document.createElement('div');
+        div.className = 'fixed-item';
+        div.innerHTML = `
+          <input type="text" value="${member}" placeholder="参加者名" onchange="updateFixedMember('${member}', this.value)">
+          <input type="text" value="${currentFixed[member]}" placeholder="座席(例: A1)" onchange="currentFixed['${member}'] = this.value">
+          <button class="delete-btn" onclick="removeFixedAssignment('${member}')">削除</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateFixedMember(oldMember, newMember) {
+      if (oldMember !== newMember) {
+        currentFixed[newMember] = currentFixed[oldMember];
+        delete currentFixed[oldMember];
+        renderFixedAssignments();
+      }
+    }
+
+    function addFixedAssignment() {
+      currentFixed[`新しい参加者${Object.keys(currentFixed).length + 1}`] = 'A1';
+      renderFixedAssignments();
+    }
+
+    function removeFixedAssignment(member) {
+      delete currentFixed[member];
+      renderFixedAssignments();
+    }
+
+    function saveFixedAssignments() {
+      firebase.database().ref('settings/fixed').set(currentFixed).then(() => {
+        showStatus('固定席設定を保存しました');
+      }).catch(error => {
+        showStatus('保存に失敗しました: ' + error.message, true);
+      });
+    }
+
+    function loadFixedAssignments() {
+      firebase.database().ref('settings/fixed').once('value').then(snapshot => {
+        currentFixed = snapshot.val() || {};
+        renderFixedAssignments();
+        showStatus('固定席設定を読み込みました');
+      });
+    }
+
+    // データ管理
+    function resetAllAssignments() {
+      if (confirm('全ての座席割り当てをリセットしますか？この操作は取り消せません。')) {
+        firebase.database().ref('assignments').remove().then(() => {
+          showStatus('座席割り当てをリセットしました');
+        });
+      }
+    }
+
+    function resetAllSettings() {
+      if (confirm('全ての設定（イベント表示、参加者、テーブル、固定席）をリセットしますか？この操作は取り消せません。')) {
+        firebase.database().ref('settings').remove().then(() => {
+          showStatus('全ての設定をリセットしました');
+          location.reload();
+        });
+      }
+    }
+
+    // 初期化
+    window.onload = () => {
+      renderTableSettings();
+      renderFixedAssignments();
+      loadEventSettings(true);
+      loadMembers();
+      loadTables();
+      loadFixedAssignments();
+    };
+  </script>
+</body>
+
+</html>

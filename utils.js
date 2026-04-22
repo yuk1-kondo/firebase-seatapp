@@ -72,17 +72,53 @@ class SeatAppUtils {
 
   // 設定データの取得
   async getSettings() {
-    const [members, tables, fixed] = await Promise.all([
+    const [members, tables, fixed, eventRaw] = await Promise.all([
       this.getData('settings/members'),
       this.getData('settings/tables'),
-      this.getData('settings/fixed')
+      this.getData('settings/fixed'),
+      this.getData('settings/event')
     ]);
 
     return {
       members: members || [],
       tables: tables || this.getDefaultTables(),
-      fixed: fixed || {}
+      fixed: fixed || {},
+      event: this.normalizeEventFromDb(eventRaw)
     };
+  }
+
+  normalizeEventFromDb(raw) {
+    const out = { title: '', listTitle: '', rouletteTitle: '' };
+    if (!raw || typeof raw !== 'object') return out;
+    ['title', 'listTitle', 'rouletteTitle'].forEach((k) => {
+      if (typeof raw[k] === 'string') out[k] = raw[k].trim();
+    });
+    return out;
+  }
+
+  getResolvedEventStrings(event) {
+    const e = event && typeof event === 'object' ? event : this.normalizeEventFromDb(event);
+    const title = e.title || '';
+    const listTitle = e.listTitle || '';
+    const rouletteTitle = e.rouletteTitle || '';
+
+    const defaults = {
+      listHeading: '桜和会2025 忘年会 座席一覧表',
+      indexDocTitle: '桜和会2025 忘年会 リアルタイム座席一覧表',
+      rouletteHeading: '桜和会2025 忘年会座席ルーレット',
+      rouletteDocTitle: 'ルーレット操作',
+      adminDocTitle: '管理者設定画面 - 桜和会2025 忘年会'
+    };
+
+    const listHeading = listTitle || (title ? `${title} 座席一覧表` : defaults.listHeading);
+    const indexDocTitle = listTitle
+      ? `${listTitle} — 座席一覧`
+      : (title ? `${title} — リアルタイム座席一覧` : defaults.indexDocTitle);
+    const rouletteHeading = rouletteTitle || (title ? `${title} 座席ルーレット` : defaults.rouletteHeading);
+    const rouletteDocTitle = rouletteTitle || defaults.rouletteDocTitle;
+    const adminDocTitle = title ? `管理者設定画面 — ${title}` : defaults.adminDocTitle;
+
+    return { listHeading, indexDocTitle, rouletteHeading, rouletteDocTitle, adminDocTitle };
   }
 
   getDefaultTables() {
@@ -117,14 +153,26 @@ class SeatAppUtils {
     return seats;
   }
 
-  // 利用可能座席の計算
+  // 利用可能座席の計算（未割当の固定席は他者の候補から論理予約として除外）
   getAvailableSeats(allSeats, assignments, memberName, fixedAssignments) {
-    const assignedSeats = Object.values(assignments || {});
-    const fixedSeat = fixedAssignments[memberName];
-    
-    return allSeats.filter(seat => {
+    const assign = assignments || {};
+    const fixed = fixedAssignments || {};
+    const assignedSeats = Object.values(assign);
+
+    const reservedSeats = new Set();
+    Object.entries(fixed).forEach(([m, seat]) => {
+      if (typeof seat !== 'string' || !seat) return;
+      if (!assign[m]) reservedSeats.add(seat);
+    });
+
+    const fixedSeat = fixed[memberName];
+
+    return allSeats.filter((seat) => {
       if (assignedSeats.includes(seat)) return false;
-      if (fixedSeat && seat !== fixedSeat) return false;
+      if (fixedSeat) {
+        return seat === fixedSeat;
+      }
+      if (reservedSeats.has(seat)) return false;
       return true;
     });
   }
