@@ -48,11 +48,11 @@
 
     .no-members-message {
       text-align: center;
-      color: #666;
+      color: var(--text-muted);
       font-size: clamp(0.95rem, calc(0.3rem + 1.5vmin), 1.2rem);
       margin: clamp(1.5rem, 6vmin, 3rem) 0;
       padding: clamp(1rem, 3vmin, 2rem);
-      background: #f5f5f5;
+      background: var(--surface-subtle);
       border-radius: var(--border-radius);
     }
   </style>
@@ -63,7 +63,7 @@
     <div class="loading"></div>
   </div>
 
-  <div class="container">
+  <div class="container container--with-footer">
     <div id="control-layout">
       <div class="page-header">
         <h1 id="roulettePageHeading">桜和会2025 忘年会座席ルーレット</h1>
@@ -83,6 +83,8 @@
         </div>
       </div>
     </div>
+
+    <footer class="site-footer">© 2025 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
   </div>
 
   <script>
@@ -102,6 +104,7 @@
         this.selectedName = null;
         this.rouletteTimer = null;
         this.availableSeats = [];
+        this.animationSeats = [];
         this.isSpinning = false;
         this.currentAssignments = {};
 
@@ -251,6 +254,11 @@
             return;
           }
 
+          this.animationSeats = this.utils.getVisualRouletteSeats(
+            this.allSeats,
+            this.currentAssignments
+          );
+
           // ルーレットアニメーション開始
           this.startRouletteAnimation();
 
@@ -264,8 +272,12 @@
       startRouletteAnimation() {
         this.resultDiv.classList.add('roulette-animation');
 
+        const pool = this.animationSeats.length > 0
+          ? this.animationSeats
+          : this.availableSeats;
+
         this.rouletteTimer = setInterval(() => {
-          const showSeat = this.availableSeats[Math.floor(Math.random() * this.availableSeats.length)];
+          const showSeat = pool[Math.floor(Math.random() * pool.length)];
           this.showResult(`${this.selectedName}先生 → テーブル${showSeat.charAt(0)}`, true);
         }, 100);
       }

@@ -76,6 +76,13 @@ firebase deploy
 
 Hosting のみ、または Realtime Database のルールのみに限定する場合は `firebase deploy --only hosting` など `--only` を指定してください。
 
+## 変更履歴（抜粋）
+
+- **フッター**: `index.html` / `control.html` / `admin.html` に共通フッター（`common.css` の `.site-footer`）を追加。
+- **ルーレット演出**: `utils.js` の `getVisualRouletteSeats` により、回転演出用の席プールを表示用と分離。
+- **イベント表示**: `settings/event` で一覧・ルーレットの見出しを管理画面から設定可能。
+- **UI**: 春向けのティール／ミント系配色、レスポンシブ調整（`common.css`）。
+
 ## ライセンス・利用
 
 リポジトリ利用者のポリシーに従ってください。

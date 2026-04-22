@@ -177,6 +177,20 @@ class SeatAppUtils {
     });
   }
 
+  /**
+   * ルーレット回転中の表示用席一覧（UI のみ）。実際の割当可否は getAvailableSeats を使うこと。
+   * 論理予約席も含むため、固定席の参加者でも演出で他テーブル記号が出る。
+   */
+  getVisualRouletteSeats(allSeats, assignments) {
+    const list = Array.isArray(allSeats) ? allSeats : [];
+    const assign = assignments || {};
+    const occupied = new Set(
+      Object.values(assign).filter((s) => typeof s === 'string' && s)
+    );
+    const pool = list.filter((seat) => !occupied.has(seat));
+    return pool.length > 0 ? pool : [...list];
+  }
+
   // URLパラメータの取得
   getUrlParam(param) {
     const urlParams = new URLSearchParams(window.location.search);

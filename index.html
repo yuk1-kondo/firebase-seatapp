@@ -40,7 +40,7 @@
     <div class="loading"></div>
   </div>
 
-  <div class="container">
+  <div class="container container--with-footer">
     <div class="page-header">
       <h1 id="listPageHeading">桜和会2025 忘年会 座席一覧表</h1>
       <div class="admin-links" id="adminLinks">
@@ -59,6 +59,8 @@
         <img id="qr-code" src="./qr_seatapp.png" alt="座席一覧QRコード">
       </div>
     </div>
+
+    <footer class="site-footer">© 2025 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
   </div>
 
   <script>
@@ -206,7 +208,7 @@
       renderNoTablesMessage() {
         const message = this.utils.createElement("div", "");
         message.innerHTML = `
-          <p style="text-align: center; color: #666; font-size: 1.2rem; margin: 3rem 0;">
+          <p style="text-align: center; color: var(--text-muted); font-size: 1.2rem; margin: 3rem 0;">
             📋 テーブル設定がありません<br>
             <small>管理者画面でテーブル設定を行ってください</small>
           </p>
