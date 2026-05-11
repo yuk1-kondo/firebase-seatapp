@@ -73,6 +73,21 @@
         </div>
       </div>
 
+      <div class="control-status" aria-live="polite">
+        <div class="control-stat">
+          <span class="control-stat-label">選択中</span>
+          <span class="control-stat-value" id="selectedStatus">未選択</span>
+        </div>
+        <div class="control-stat">
+          <span class="control-stat-label">決定済み</span>
+          <span class="control-stat-value" id="assignedStatus">0名</span>
+        </div>
+        <div class="control-stat">
+          <span class="control-stat-label">残り</span>
+          <span class="control-stat-value" id="remainingStatus">0名</span>
+        </div>
+      </div>
+
       <div id="nameButtons" class="grid grid-4"></div>
 
       <div id="control-footer">
@@ -95,6 +110,9 @@
         this.nameButtons = document.getElementById("nameButtons");
         this.lotteryBtn = document.getElementById("lotteryBtn");
         this.resultDiv = document.getElementById("result");
+        this.selectedStatus = document.getElementById("selectedStatus");
+        this.assignedStatus = document.getElementById("assignedStatus");
+        this.remainingStatus = document.getElementById("remainingStatus");
 
         // アプリ状態
         this.knownMembers = [];
@@ -168,6 +186,7 @@
         this.utils.addListener('assignments', (assignments) => {
           this.currentAssignments = assignments || {};
           this.renderButtons();
+          this.updateStatusSummary();
         }, 'roulette');
       }
 
@@ -192,6 +211,8 @@
 
           this.nameButtons.appendChild(btn);
         });
+
+        this.updateStatusSummary();
       }
 
       renderNoMembersMessage() {
@@ -219,6 +240,7 @@
 
         this.showResult(`${name}先生を選択中...`, true);
         this.lotteryBtn.disabled = false;
+        this.updateStatusSummary();
 
         this.utils.log('参加者選択', name);
       }
@@ -315,6 +337,7 @@
         } finally {
           this.resetBtn();
           this.selectedName = null;
+          this.updateStatusSummary();
         }
       }
 
@@ -358,6 +381,7 @@
           if (success) {
             this.showResult("", false);
             this.selectedName = null;
+            this.updateStatusSummary();
             this.utils.log('割り当てリセット完了');
           } else {
             this.showError('リセットに失敗しました');
@@ -378,6 +402,22 @@
 
       showError(message) {
         alert(`エラー: ${message}`);
+      }
+
+      updateStatusSummary() {
+        const assignedCount = Object.keys(this.currentAssignments || {}).length;
+        const totalCount = this.knownMembers.length;
+        const remainingCount = Math.max(totalCount - assignedCount, 0);
+
+        if (this.selectedStatus) {
+          this.selectedStatus.textContent = this.selectedName ? `${this.selectedName}先生` : '未選択';
+        }
+        if (this.assignedStatus) {
+          this.assignedStatus.textContent = `${assignedCount}名`;
+        }
+        if (this.remainingStatus) {
+          this.remainingStatus.textContent = `${remainingCount}名`;
+        }
       }
 
       destroy() {

@@ -43,13 +43,9 @@
   <div class="container container--with-footer">
     <div class="page-header">
       <h1 id="listPageHeading">桜和会2025 忘年会 座席一覧表</h1>
-      <div class="admin-links" id="adminLinks">
-        <a href="admin.html">⚙️ 設定</a>
-        <a href="control.html">🎰 ルーレット</a>
-      </div>
-      <button id="adminResetBtn" class="btn btn-danger" type="button" onclick="resetAssignments()">🔄 リセット</button>
     </div>
 
+    <div id="layoutSummary" class="layout-summary" aria-live="polite"></div>
     <div id="layout" class="tables-container"></div>
 
     <!-- Template for QR Code to be cloned into grid -->
@@ -77,12 +73,6 @@
       async init() {
         try {
           this.showLoading(true);
-
-          // 管理者モードの確認
-          if (this.utils.isAdminMode()) {
-            document.getElementById("adminResetBtn").classList.add("is-visible");
-            document.getElementById("adminLinks").classList.add("show");
-          }
 
           // 設定とデータを並行読み込み
           await this.loadInitialData();
@@ -119,7 +109,10 @@
         if (!this.layout) return;
 
         this.layout.innerHTML = "";
-        const tableKeys = Object.keys(this.tableSeatCounts).sort();
+        const visibleTables = this.getVisibleTables();
+        const tableKeys = visibleTables.map(({ block }) => block);
+        this.applyLayoutDensity(visibleTables);
+        this.renderLayoutSummary(visibleTables);
 
         if (tableKeys.length === 0) {
           this.renderNoTablesMessage();
@@ -136,6 +129,96 @@
 
         // QRコードをグリッドの最後に配置
         this.appendQRCode();
+      }
+
+      getVisibleTables() {
+        return Object.keys(this.tableSeatCounts).sort().reduce((tables, block) => {
+          const config = this.tableSeatCounts[block];
+          if (!config) return tables;
+
+          const count = typeof config === 'object' ? config.seats : config;
+          const enabled = typeof config === 'object' ? config.enabled !== false : true;
+
+          if (enabled && count && count > 0) {
+            tables.push({ block, count });
+          }
+
+          return tables;
+        }, []);
+      }
+
+      applyLayoutDensity(visibleTables) {
+        if (!this.layout) return;
+
+        const tableCount = visibleTables.length;
+        const maxSeats = visibleTables.reduce((max, table) => Math.max(max, table.count), 0);
+        const totalSeats = visibleTables.reduce((sum, table) => sum + table.count, 0);
+        const density = tableCount <= 3 ? 'sparse' : tableCount <= 8 ? 'balanced' : 'dense';
+
+        this.layout.classList.remove('layout-density-sparse', 'layout-density-balanced', 'layout-density-dense');
+        this.layout.classList.add(`layout-density-${density}`);
+        this.layout.dataset.tableCount = String(tableCount);
+        this.layout.dataset.maxSeats = String(maxSeats);
+        this.layout.dataset.totalSeats = String(totalSeats);
+
+        const layoutByDensity = {
+          sparse: {
+            minWidth: 'clamp(260px, 32vw, 420px)',
+            maxWidth: '420px',
+            gap: 'clamp(14px, 1.6vw, 28px)',
+            seatSize: maxSeats >= 8 ? 'clamp(48px, 6.4vh, 74px)' : 'clamp(60px, 8vh, 88px)'
+          },
+          balanced: {
+            minWidth: maxSeats >= 8 ? 'clamp(220px, 24vw, 320px)' : 'clamp(210px, 23vw, 300px)',
+            maxWidth: '1fr',
+            gap: 'clamp(10px, 1.1vw, 20px)',
+            seatSize: maxSeats >= 8 ? 'clamp(48px, 6.2vh, 74px)' : 'clamp(54px, 7.2vh, 84px)'
+          },
+          dense: {
+            minWidth: maxSeats >= 8 ? 'clamp(170px, 18vw, 250px)' : 'clamp(180px, 19vw, 260px)',
+            maxWidth: '1fr',
+            gap: 'clamp(8px, 0.8vw, 16px)',
+            seatSize: totalSeats >= 80 ? 'clamp(42px, 5.6vh, 64px)' : 'clamp(46px, 6vh, 70px)'
+          }
+        };
+
+        const selected = layoutByDensity[density];
+        this.layout.style.setProperty('--table-min-width', selected.minWidth);
+        this.layout.style.setProperty('--table-max-width', selected.maxWidth);
+        this.layout.style.setProperty('--table-grid-gap', selected.gap);
+        this.layout.style.setProperty('--seat-size', selected.seatSize);
+      }
+
+      renderLayoutSummary(visibleTables) {
+        const summary = document.getElementById('layoutSummary');
+        if (!summary) return;
+
+        const totalSeats = visibleTables.reduce((sum, table) => sum + table.count, 0);
+        const assignedSeats = Object.values(this.currentAssignments || {})
+          .filter(seat => typeof seat === 'string' && seat).length;
+        const emptySeats = Math.max(totalSeats - assignedSeats, 0);
+
+        if (visibleTables.length === 0) {
+          summary.hidden = true;
+          summary.innerHTML = '';
+          return;
+        }
+
+        summary.hidden = false;
+        summary.innerHTML = `
+          <div class="summary-item summary-item--tables">
+            <span class="summary-label">テーブル</span>
+            <span class="summary-value">${visibleTables.length}卓</span>
+          </div>
+          <div class="summary-item summary-item--assigned">
+            <span class="summary-label">着席済み</span>
+            <span class="summary-value">${assignedSeats}名</span>
+          </div>
+          <div class="summary-item summary-item--empty">
+            <span class="summary-label">空席</span>
+            <span class="summary-value">${emptySeats}席</span>
+          </div>
+        `;
       }
 
       renderTableBlock(block) {
@@ -157,8 +240,12 @@
 
         const tableBlock = this.utils.createElement("div", "table-block");
 
+        const occupiedCount = Array.from({ length: count }, (_, index) => `${block}${index + 1}`)
+          .filter(seatCode => this.findSeatOccupant(seatCode)).length;
+
         // テーブルラベル
-        const label = this.utils.createElement("div", "table-label", `テーブル${block}`);
+        const label = this.utils.createElement("div", "table-label");
+        label.innerHTML = `<span>テーブル${block}</span><span class="table-count">${occupiedCount}/${count}</span>`;
         tableBlock.appendChild(label);
 
         // 座席行
@@ -186,9 +273,7 @@
           seatDiv.classList.add("empty");
         }
 
-        // アクセシビリティ向上
-        seatDiv.setAttribute('tabindex', '0');
-        seatDiv.setAttribute('role', 'button');
+        seatDiv.setAttribute('role', 'text');
 
         return seatDiv;
       }
@@ -210,31 +295,10 @@
         message.innerHTML = `
           <p style="text-align: center; color: var(--text-muted); font-size: 1.2rem; margin: 3rem 0;">
             📋 テーブル設定がありません<br>
-            <small>管理者画面でテーブル設定を行ってください</small>
+            <small>座席表の準備が完了するまでお待ちください</small>
           </p>
         `;
         this.layout.appendChild(message);
-      }
-
-      async resetAssignments() {
-        const confirmed = await this.utils.confirm("全ての割り当てをリセットしてもよろしいですか？");
-        if (!confirmed) return;
-
-        try {
-          this.showLoading(true);
-          const success = await this.utils.removeData("assignments");
-
-          if (success) {
-            this.utils.log('割り当てリセット完了');
-          } else {
-            this.showError('リセットに失敗しました');
-          }
-        } catch (error) {
-          console.error('リセットエラー:', error);
-          this.showError('リセット処理でエラーが発生しました');
-        } finally {
-          this.showLoading(false);
-        }
       }
 
       showLoading(isLoading) {
@@ -250,13 +314,6 @@
 
       destroy() {
         this.utils.removeListeners('seatDisplay');
-      }
-    }
-
-    // グローバル関数（既存のHTMLから呼び出されるため）
-    function resetAssignments() {
-      if (window.seatDisplayApp) {
-        window.seatDisplayApp.resetAssignments();
       }
     }
 
