@@ -82,7 +82,7 @@ Hosting のみ、または Realtime Database のルールのみに限定する�
 
 ## 変更履歴（抜粋）
 
-- **一覧・ルーレットUI**: 座席一覧のサマリー・レイアウト密度、ルーレット画面の進行状況表示。`assets/` と `character-sprite.js` は同梱（現状の HTML からは未読み込み・将来用）。
+- **一覧・ルーレットUI**: 座席一覧のサマリー・レイアウト密度、ルーレット画面の進行状況表示。
 - **フッター**: `index.html` / `control.html` / `admin.html` に共通フッター（`common.css` の `.site-footer`）を追加。
 - **ルーレット演出**: `utils.js` の `getVisualRouletteSeats` により、回転演出用の席プールを表示用と分離。
 - **イベント表示**: `settings/event` で一覧・ルーレットの見出しを管理画面から設定可能。

@@ -255,35 +255,6 @@ class SeatAppUtils {
     }
   }
 
-  // データバリデーション
-  validateTableData(tables) {
-    if (!tables || typeof tables !== 'object') return false;
-    
-    for (const [key, value] of Object.entries(tables)) {
-      if (!/^[A-Z]$/.test(key) || !Number.isInteger(value) || value < 1 || value > 20) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  validateMembersList(members) {
-    if (!Array.isArray(members)) return false;
-    return members.every(member => typeof member === 'string' && member.trim().length > 0);
-  }
-
-  validateFixedAssignments(fixed, tables) {
-    if (!fixed || typeof fixed !== 'object') return true; // 空は有効
-    
-    const allSeats = this.generateSeats(tables);
-    
-    for (const [member, seat] of Object.entries(fixed)) {
-      if (typeof member !== 'string' || member.trim().length === 0) return false;
-      if (typeof seat !== 'string' || !allSeats.includes(seat)) return false;
-    }
-    return true;
-  }
-
   // クリーンアップ
   destroy() {
     this.listeners.forEach((_, context) => {
