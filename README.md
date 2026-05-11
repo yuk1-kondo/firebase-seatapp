@@ -19,7 +19,7 @@ Firebase Realtime Database と Firebase Hosting 上で動く、**イベント等
 
 | ファイル | 役割 |
 |----------|------|
-| [index.html](index.html) | **座席一覧表示**。`assignments` を購読し、テーブルごとに席を描画。管理者用クエリ `?admin=true` でリセットボタンと設定系リンクを表示可能。 |
+| [index.html](index.html) | **座席一覧表示**（来場者向け）。`assignments` を購読し、有効なテーブルだけを描画。卓数・着席済み・空席のサマリーと、テーブルごとの占有数表示。リセット・設定リンクは [control.html](control.html) / [admin.html](admin.html) 側で操作。 |
 | [control.html](control.html) | **ルーレット操作**。参加者ボタンを選び、空席から抽選して `assignments` に書き込み。固定席設定がある参加者は確定時にその席を優先。 |
 | [admin.html](admin.html) | **管理者設定**。参加者リスト、テーブル座席数・有効/無効、固定席、イベント表示（タイトル・一覧見出し・ルーレット見出し）の編集と保存。 |
 
@@ -39,10 +39,11 @@ Firebase Realtime Database と Firebase Hosting 上で動く、**イベント等
 
 - `getSettings()` でテーブル定義を取得し、`assignments` を `on('value')` で購読して再描画。
 - 無効テーブル・座席数 0 のブロックは表示しない。
-- 管理者モード時のみ、全割り当てのリセットが可能。
+- テーブル数に応じたレイアウト密度（席サイズ・余白の調整）と、ページ上部のサマリー（卓数・着席済み・空席）。
 
 ### ルーレット（control）
 
+- 選択中の参加者、決定済み人数、残り人数をステータス表示。
 - 参加者は `settings/members` から生成。既に `assignments` にいる名前はボタン無効。
 - **論理予約**: `settings/fixed` に載っていてまだ割り当てられていない人の席は、他者の抽選候補から除外（固定の人を最後に回しても席が奪われない）。
 - ストップ時は `fixed` があればその席、なければ候補からランダム。結果は `assignments/{名前}` に `set`。
@@ -78,6 +79,7 @@ Hosting のみ、または Realtime Database のルールのみに限定する�
 
 ## 変更履歴（抜粋）
 
+- **一覧・ルーレットUI**: 座席一覧のサマリー・レイアウト密度、ルーレット画面の進行状況表示、`assets/` スプライト素材と `character-sprite.js` を追加。
 - **フッター**: `index.html` / `control.html` / `admin.html` に共通フッター（`common.css` の `.site-footer`）を追加。
 - **ルーレット演出**: `utils.js` の `getVisualRouletteSeats` により、回転演出用の席プールを表示用と分離。
 - **イベント表示**: `settings/event` で一覧・ルーレットの見出しを管理画面から設定可能。
