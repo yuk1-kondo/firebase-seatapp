@@ -11,23 +11,6 @@
   <script src="./utils.js"></script>
   <link rel="stylesheet" href="./common.css">
   <style>
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .loading-overlay.hidden {
-      display: none;
-    }
-
     /* QR Code Section hidden by default in HTML, shown via JS in grid */
     #qr-template {
       display: none;
@@ -51,12 +34,12 @@
     <!-- Template for QR Code to be cloned into grid -->
     <div id="qr-template">
       <div id="qr-section">
-        <p style="font-size: 1.5vh; margin: 0.5vh 0;">スマホで確認</p>
+        <p class="qr-caption">スマホで確認</p>
         <img id="qr-code" src="./qr_seatapp.png" alt="座席一覧QRコード">
       </div>
     </div>
 
-    <footer class="site-footer">© 2025 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
+    <footer class="site-footer">© 2025-2026 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
   </div>
 
   <script>
@@ -291,12 +274,10 @@
       }
 
       renderNoTablesMessage() {
-        const message = this.utils.createElement("div", "");
+        const message = this.utils.createElement("div", "empty-state-message");
         message.innerHTML = `
-          <p style="text-align: center; color: var(--text-muted); font-size: 1.2rem; margin: 3rem 0;">
-            📋 テーブル設定がありません<br>
-            <small>座席表の準備が完了するまでお待ちください</small>
-          </p>
+          📋 テーブル設定がありません
+          <small>座席表の準備が完了するまでお待ちください</small>
         `;
         this.layout.appendChild(message);
       }

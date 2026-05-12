@@ -28,33 +28,6 @@
         transform: scale(1);
       }
     }
-
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .loading-overlay.hidden {
-      display: none;
-    }
-
-    .no-members-message {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: clamp(0.95rem, calc(0.3rem + 1.5vmin), 1.2rem);
-      margin: clamp(1.5rem, 6vmin, 3rem) 0;
-      padding: clamp(1rem, 3vmin, 2rem);
-      background: var(--surface-subtle);
-      border-radius: var(--border-radius);
-    }
   </style>
 </head>
 
@@ -99,7 +72,7 @@
       </div>
     </div>
 
-    <footer class="site-footer">© 2025 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
+    <footer class="site-footer">© 2025-2026 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
   </div>
 
   <script>
@@ -125,6 +98,7 @@
         this.animationSeats = [];
         this.isSpinning = false;
         this.currentAssignments = {};
+        this.adminUnlocked = false;
 
         this.init();
       }
@@ -135,8 +109,16 @@
 
           // 管理者モードの確認
           if (this.utils.isAdminMode()) {
-            document.getElementById("adminResetBtn").classList.add("is-visible");
-            document.getElementById("adminLinks").classList.add("show");
+            this.adminUnlocked = await this.utils.requireAdminAuth({
+              title: '管理者モード',
+              description: 'リセットや設定画面へのアクセスにはPINコードを入力してください。',
+              allowCancel: true
+            });
+
+            if (this.adminUnlocked) {
+              document.getElementById("adminResetBtn").classList.add("is-visible");
+              document.getElementById("adminLinks").classList.add("show");
+            }
           }
 
           // 設定データを読み込み
@@ -371,6 +353,18 @@
       }
 
       async resetAssignments() {
+        if (!this.adminUnlocked) {
+          const authenticated = await this.utils.requireAdminAuth({
+            title: '管理者認証',
+            description: 'リセットするにはPINコードを入力してください。',
+            allowCancel: true
+          });
+          if (!authenticated) return;
+          this.adminUnlocked = true;
+          document.getElementById("adminResetBtn").classList.add("is-visible");
+          document.getElementById("adminLinks").classList.add("show");
+        }
+
         const confirmed = await this.utils.confirm("全ての席割り当てをリセットしますか？");
         if (!confirmed) return;
 

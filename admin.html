@@ -11,23 +11,6 @@
   <script src="./utils.js"></script>
   <link rel="stylesheet" href="./common.css">
   <style>
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .loading-overlay.hidden {
-      display: none;
-    }
-
     /* モバイル対応 */
     @media (max-width: 768px) {
       .section {
@@ -128,7 +111,7 @@
   </style>
 </head>
 
-<body>
+<body class="admin-protected">
   <div class="loading-overlay hidden" id="loadingOverlay">
     <div class="loading"></div>
   </div>
@@ -215,7 +198,7 @@
       </div>
     </div>
 
-    <footer class="site-footer">© 2025 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
+    <footer class="site-footer">© 2025-2026 桜和会座席ルーレット- Developed by YUKI KONDO</footer>
   </div>
 
   <script>
@@ -462,7 +445,19 @@
     }
 
     // 初期化
-    window.onload = () => {
+    window.onload = async () => {
+      const authenticated = await window.seatAppUtils.requireAdminAuth({
+        title: '管理者設定画面',
+        description: '設定を変更するにはPINコードを入力してください。',
+        allowCancel: true
+      });
+
+      if (!authenticated) {
+        location.href = 'index.html';
+        return;
+      }
+
+      document.body.classList.remove('admin-protected');
       renderTableSettings();
       renderFixedAssignments();
       loadEventSettings(true);

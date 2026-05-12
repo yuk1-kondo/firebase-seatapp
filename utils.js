@@ -4,6 +4,8 @@ class SeatAppUtils {
     this.db = firebase.database();
     this.cache = new Map();
     this.listeners = new Map();
+    this.adminPinHash = '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab';
+    this.adminSessionKey = 'seatAppAdminAuthenticated';
   }
 
   // Firebase操作の共通メソッド
@@ -199,6 +201,107 @@ class SeatAppUtils {
 
   isAdminMode() {
     return this.getUrlParam('admin') === 'true';
+  }
+
+  async hashText(text) {
+    const data = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  isAdminAuthenticated() {
+    return sessionStorage.getItem(this.adminSessionKey) === 'true';
+  }
+
+  setAdminAuthenticated(isAuthenticated) {
+    if (isAuthenticated) {
+      sessionStorage.setItem(this.adminSessionKey, 'true');
+    } else {
+      sessionStorage.removeItem(this.adminSessionKey);
+    }
+  }
+
+  async verifyAdminPin(pin) {
+    if (!pin) return false;
+    const hash = await this.hashText(String(pin).trim());
+    return hash === this.adminPinHash;
+  }
+
+  async requireAdminAuth(options = {}) {
+    if (this.isAdminAuthenticated()) return true;
+
+    const {
+      title = '管理者認証',
+      description = '管理機能を使うにはPINコードを入力してください。',
+      allowCancel = true
+    } = options;
+
+    return new Promise((resolve) => {
+      const existing = document.getElementById('adminAuthOverlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'adminAuthOverlay';
+      overlay.className = 'admin-auth-overlay';
+      overlay.innerHTML = `
+        <form class="admin-auth-card" id="adminAuthForm">
+          <h2>${title}</h2>
+          <p>${description}</p>
+          <label for="adminPinInput">PINコード</label>
+          <input id="adminPinInput" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" required>
+          <div class="admin-auth-error" id="adminAuthError" aria-live="polite"></div>
+          <div class="admin-auth-actions">
+            <button class="btn btn-primary" type="submit">認証する</button>
+            ${allowCancel ? '<button class="btn btn-secondary" type="button" id="adminAuthCancel">キャンセル</button>' : ''}
+          </div>
+        </form>
+      `;
+
+      const finish = (result) => {
+        overlay.remove();
+        resolve(result);
+      };
+
+      overlay.addEventListener('click', (event) => {
+        if (allowCancel && event.target === overlay) finish(false);
+      });
+
+      document.body.appendChild(overlay);
+
+      const form = document.getElementById('adminAuthForm');
+      const input = document.getElementById('adminPinInput');
+      const error = document.getElementById('adminAuthError');
+      const cancel = document.getElementById('adminAuthCancel');
+
+      if (cancel) {
+        cancel.addEventListener('click', () => finish(false));
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        error.textContent = '';
+
+        try {
+          const ok = await this.verifyAdminPin(input.value);
+          if (ok) {
+            this.setAdminAuthenticated(true);
+            finish(true);
+            return;
+          }
+
+          input.value = '';
+          error.textContent = 'PINコードが違います';
+          input.focus();
+        } catch (authError) {
+          console.error('PIN認証エラー:', authError);
+          error.textContent = '認証処理でエラーが発生しました';
+        }
+      });
+
+      setTimeout(() => input.focus(), 0);
+    });
   }
 
   // 状態管理
